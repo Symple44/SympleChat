@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+{% if debug %}
+<script type="module" src="http://192.168.0.15:5173/@vite/client"></script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div id="chat-root" class="h-screen bg-gray-50"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.API_URL = "{% if debug %}http://192.168.0.15:8000{% else %}""{% endif %}";
+    window.WS_URL = "{% if debug %}ws://192.168.0.15:8000{% else %}ws://{{ request.url.hostname }}:{{ request.url.port }}{% endif %}/ws/chat";
+</script>
+
+{% if debug %}
+<script type="module" src="http://192.168.0.15:5173/src/main.jsx"></script>
+{% else %}
+<script type="module" src="{{ url_for('static', path='js/main.js') }}"></script>
+{% endif %}
+{% endblock %}
