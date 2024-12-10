@@ -1,7 +1,8 @@
 // src/components/chat/ChatHeader.jsx
+import React from 'react';
 import { MessageCircle } from 'lucide-react';
 
-export const ChatHeader = ({ connected }) => {
+const ChatHeader = ({ connected }) => {
   return (
     <header className="bg-white shadow-sm border-b px-4 py-3">
       <div className="flex items-center justify-between">
@@ -21,3 +22,5 @@ export const ChatHeader = ({ connected }) => {
     </header>
   );
 };
+
+export default ChatHeader;
