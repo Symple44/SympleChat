@@ -1,28 +1,28 @@
-// src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ChatProvider } from './context/ChatContext';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import Home from './pages/Home';
 import App from './App';
 import './styles/main.css';
+import { ChatProvider } from './context/ChatContext';
 
-// Vérification de l'état du système au démarrage
-async function checkSystemHealth() {
-  try {
-    const health = await api.checkHealth();
-    console.log('System health:', health);
-  } catch (error) {
-    console.error('System health check failed:', error);
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Home />
+  },
+  {
+    path: "/chat",
+    element: (
+      <ChatProvider>
+        <App />
+      </ChatProvider>
+    )
   }
-}
+]);
 
-// Point d'entrée de l'application
 ReactDOM.createRoot(document.getElementById('chat-root')).render(
   <React.StrictMode>
-    <ChatProvider>
-      <App />
-    </ChatProvider>
+    <RouterProvider router={router} />
   </React.StrictMode>
 );
-
-// Vérification initiale de l'état du système
-checkSystemHealth();
