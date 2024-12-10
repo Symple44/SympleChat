@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { ChatProvider } from './context/ChatContext';
 import Home from './pages/Home';
 import App from './App';
 import './styles/main.css';
