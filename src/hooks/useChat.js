@@ -1,105 +1,34 @@
 // src/hooks/useChat.js
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '../services/api';
+import { useState, useEffect, useCallback } from 'react';
+import { useWebSocket } from './useWebSocket';
+import { useMessages } from './useMessages';
 
-export function useChat() {
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+export const useChat = () => {
   const [error, setError] = useState(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const abortControllerRef = useRef(null);
+  const { connected, sendSocketMessage } = useWebSocket();
+  const { messages, sendMessage, isLoading } = useMessages();
 
-  // Chargement initial de l'historique
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
-  const loadHistory = async () => {
+  const handleSendMessage = useCallback(async (content) => {
     try {
-      setIsLoading(true);
-      const history = await api.getHistory();
-      setMessages(history.map(msg => ({
-        id: msg.id || Date.now(),
-        content: msg.query || msg.response,
-        type: msg.query ? 'user' : 'assistant',
-        timestamp: new Date(msg.timestamp).toLocaleTimeString()
-      })));
-    } catch (err) {
-      setError('Erreur lors du chargement de l\'historique');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const sendMessage = async (content, useStream = false) => {
-    if (!content.trim() || isLoading) return;
-
-    // Ajout immédiat du message utilisateur
-    const userMessage = {
-      id: Date.now(),
-      content,
-      type: 'user',
-      timestamp: new Date().toLocaleTimeString()
-    };
-    setMessages(prev => [...prev, userMessage]);
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      if (useStream) {
-        setIsStreaming(true);
-        let responseContent = '';
-        
-        for await (const chunk of api.streamMessage(content)) {
-          if (chunk.token) {
-            responseContent += chunk.token;
-            setMessages(prev => {
-              const lastMessage = prev[prev.length - 1];
-              if (lastMessage.type === 'assistant') {
-                return [...prev.slice(0, -1), { ...lastMessage, content: responseContent }];
-              }
-              return [...prev, {
-                id: Date.now(),
-                content: responseContent,
-                type: 'assistant',
-                timestamp: new Date().toLocaleTimeString()
-              }];
-            });
-          }
-        }
-      } else {
-        const response = await api.sendMessage(content);
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          content: response.response,
-          type: 'assistant',
-          timestamp: new Date().toLocaleTimeString()
-        }]);
-      }
+      await sendMessage(content);
     } catch (err) {
       setError('Erreur lors de l\'envoi du message');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-      setIsStreaming(false);
     }
-  };
+  }, [sendMessage]);
 
-  const cancelStream = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setIsStreaming(false);
-      setIsLoading(false);
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [error]);
 
   return {
     messages,
     isLoading,
     error,
-    isStreaming,
-    sendMessage,
-    cancelStream
+    connected,
+    sendMessage: handleSendMessage,
+    sendSocketMessage,
   };
-}
+};
