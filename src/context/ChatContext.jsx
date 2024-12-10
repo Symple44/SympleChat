@@ -1,5 +1,16 @@
 // src/context/ChatContext.jsx
-const ChatContext = createContext();
+import { createContext, useContext } from 'react';
+import { useChat } from '../hooks/useChat';
+
+const ChatContext = createContext(null);
+
+export const useChatContext = () => {
+  const context = useContext(ChatContext);
+  if (!context) {
+    throw new Error('useChatContext must be used within a ChatProvider');
+  }
+  return context;
+};
 
 export const ChatProvider = ({ children }) => {
   const chatState = useChat();
@@ -10,3 +21,5 @@ export const ChatProvider = ({ children }) => {
     </ChatContext.Provider>
   );
 };
+
+export default ChatContext;
