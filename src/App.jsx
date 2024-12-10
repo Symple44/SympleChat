@@ -1,12 +1,15 @@
 // src/App.jsx
-const App = () => {
+import { ChatContainer } from './components/chat/ChatContainer';
+import { useChat } from './hooks/useChat';
+
+function App() {
+  const chatProps = useChat();
+  
   return (
-    <ChatProvider>
-      <div className="h-screen flex flex-col">
-        <ChatHeader />
-        <MessageList />
-        <MessageInput />
-      </div>
-    </ChatProvider>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <ChatContainer {...chatProps} />
+    </div>
   );
-};
+}
+
+export default App;
