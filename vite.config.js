@@ -20,4 +20,5 @@ export default defineConfig({
   },
   // Cette configuration est importante pour le routing
   base: '/',
+  root: process.cwd(),
 });
