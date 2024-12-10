@@ -1,6 +1,6 @@
 // src/App.jsx
-import { ChatContainer } from './components/chat/ChatContainer';
-import { useChat } from './hooks/useChat';
+import { ChatContainer } from './components/chat/ChatContainer.jsx';
+import { useChat } from './hooks/useChat.js';
 
 function App() {
   const chatProps = useChat();
