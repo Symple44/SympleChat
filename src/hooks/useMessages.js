@@ -8,39 +8,32 @@ export const useMessages = () => {
   const userId = 'oweo';
 
   const loadMessageHistory = async () => {
-    console.log('Chargement historique...');
     try {
-      // Modifié pour correspondre à la route existante
-      const response = await fetch('/api/chat/history/oweo', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
+      console.log('Début chargement historique');
+      const response = await fetch(`/api/chat/history/${userId}`);
 
-      console.log('Status:', response.status);
-      console.log('Headers:', Object.fromEntries(response.headers.entries()));
+      // Pour debug
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
 
       if (!response.ok) {
         const text = await response.text();
-        console.error('Réponse erreur:', text);
-        throw new Error(`Server error: ${response.status}`);
+        console.log('Réponse erreur:', text);
+        throw new Error(`Erreur serveur: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Data reçue:', data);
-
       const formattedMessages = data.map(msg => ({
         id: msg.id || Date.now(),
-        content: msg.content || msg.response,  // Adapté selon la structure de ta réponse
-        type: msg.type || (msg.query ? 'user' : 'assistant'),
+        content: msg.query || msg.response,
+        type: msg.query ? 'user' : 'assistant',
         timestamp: new Date(msg.timestamp).toLocaleTimeString()
       }));
 
       setMessages(formattedMessages);
     } catch (err) {
-      console.error('Erreur détaillée:', err);
-      setError(err.message);
+      console.error('Erreur chargement historique:', err);
+      setError('Erreur lors du chargement de l\'historique');
     }
   };
 
@@ -50,6 +43,7 @@ export const useMessages = () => {
     try {
       setIsLoading(true);
 
+      // Message utilisateur
       const userMessage = {
         id: Date.now(),
         content,
@@ -58,12 +52,10 @@ export const useMessages = () => {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // Modifié pour utiliser le proxy configuré
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
         body: JSON.stringify({
           user_id: userId,
@@ -74,21 +66,19 @@ export const useMessages = () => {
 
       if (!response.ok) {
         const text = await response.text();
-        console.error('Réponse erreur:', text);
-        throw new Error(`Server error: ${response.status}`);
+        console.log('Réponse erreur:', text);
+        throw new Error(`Erreur serveur: ${response.status}`);
       }
 
       const data = await response.json();
-      
-      const assistantMessage = {
+      setMessages(prev => [...prev, {
         id: Date.now() + 1,
         content: data.response,
         type: 'assistant',
         fragments: data.fragments || [],
         timestamp: new Date().toLocaleTimeString()
-      };
+      }]);
 
-      setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
       console.error('Erreur envoi message:', err);
       setError('Erreur lors de l\'envoi du message');
@@ -103,8 +93,8 @@ export const useMessages = () => {
 
   return {
     messages,
-    sendMessage,
     isLoading,
-    error
+    error,
+    sendMessage
   };
 };
