@@ -9,36 +9,131 @@ export const useMessages = () => {
   const [isLoading, setIsLoading] = useState(false);
   const userId = 'oweo';
 
-  const loadMessageHistory = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/chat/history/${userId}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log("Réponse historique:", data);
-      
-      const formattedMessages = data.map(msg => ({
-        id: msg.id || Date.now(),
-        content: msg.query || msg.response,
-        type: msg.query ? 'user' : 'assistant',
-        timestamp: formatTimestamp(msg.timestamp)
-      }));
-      
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Erreur chargement historique:', error);
-    }
+const sendMessage = async (content) => {
+  if (!content.trim() || isLoading) return;
+
+  // Création du message utilisateur
+  const userMessage = {
+    id: Date.now(),
+    content,
+    type: 'user',
+    timestamp: new Date().toISOString(),
   };
 
-  const sendMessage = async (content) => {
+  setMessages(prev => [...prev, userMessage]);
+  setIsLoading(true);
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        query: content,
+        session_id: null, // Si nous voulons gérer les sessions
+        language: 'fr',
+        application: null, // Si nous voulons filtrer par application
+        context: {} // Pour le contexte supplémentaire si nécessaire
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Création du message assistant
+    const assistantMessage = {
+      id: Date.now(),
+      content: data.response,
+      type: 'assistant',
+      fragments: data.fragments || [],
+      timestamp: new Date().toISOString(),
+      documents_used: data.documents_used || []
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+
+    // Sauvegarder dans l'historique
+    await saveToHistory({
+      user_message: userMessage,
+      assistant_message: assistantMessage,
+      documents: data.documents_used,
+      confidence_score: data.confidence_score
+    });
+
+  } catch (error) {
+    console.error('Erreur envoi message:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Fonction pour sauvegarder dans l'historique
+const saveToHistory = async (chatData) => {
+  try {
+    const response = await fetch('/api/chat/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        session_id: null,
+        user_message: {
+          content: chatData.user_message.content,
+          timestamp: chatData.user_message.timestamp
+        },
+        assistant_message: {
+          content: chatData.assistant_message.content,
+          timestamp: chatData.assistant_message.timestamp,
+          documents_used: chatData.documents,
+          confidence_score: chatData.confidence_score
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur de sauvegarde dans l\'historique');
+    }
+  } catch (error) {
+    console.error('Erreur sauvegarde historique:', error);
+  }
+};
+
+const loadMessageHistory = async () => {
+  try {
+    const response = await fetch(`/api/chat/history/${userId}`);
+    if (!response.ok) throw new Error('Erreur chargement historique');
+    
+    const data = await response.json();
+    
+    // Transformation des données d'historique en format message
+    const formattedMessages = data.flatMap(item => ([
+      {
+        id: Date.now() + '-user',
+        content: item.query,
+        type: 'user',
+        timestamp: item.timestamp
+      },
+      {
+        id: Date.now() + '-assistant',
+        content: item.response,
+        type: 'assistant',
+        fragments: item.fragments || [],
+        documents_used: item.documents_used || [],
+        timestamp: item.timestamp
+      }
+    ]));
+
+    setMessages(formattedMessages);
+  } catch (error) {
+    console.error('Erreur chargement historique:', error);
+  }
+};
     if (!content.trim() || isLoading) return;
 
     const newMessage = {
