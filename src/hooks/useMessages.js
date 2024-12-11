@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE_URL = '';
+const API_BASE_URL = '/api';
 const DEFAULT_USER_ID = 'oweo';
 
 export const useMessages = (userId = DEFAULT_USER_ID) => {
