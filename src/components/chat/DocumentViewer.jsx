@@ -2,8 +2,8 @@ import React from 'react';
 import { X } from 'lucide-react';
 
 const DocumentViewer = ({ document, onClose }) => (
-  <div className="fixed right-0 top-0 h-full w-1/2 bg-white dark:bg-gray-800 shadow-lg overflow-auto">
-    <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-2 flex justify-between items-center">
+  <div className="absolute inset-x-0 top-[64px] bottom-[76px] bg-white z-50 overflow-auto shadow-lg">
+    <div className="sticky top-0 bg-white border-b px-4 py-2 flex justify-between items-center">
       <div className="flex-1">
         <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200">
           {document.source.split('/').pop()}
@@ -18,7 +18,7 @@ const DocumentViewer = ({ document, onClose }) => (
       </button>
     </div>
 
-    <div className="p-8 text-gray-900 dark:text-gray-100">
+    <div className="p-8">
       {document.images && document.images.length > 0 && (
         <div className="flex justify-between items-start mb-8 bg-white">
           <div className="bg-white p-2">
