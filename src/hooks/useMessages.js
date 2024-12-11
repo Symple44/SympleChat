@@ -1,5 +1,5 @@
 // src/hooks/useMessages.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const API_BASE_URL = '/api';
 const DEFAULT_USER_ID = 'oweo';
