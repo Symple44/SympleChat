@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+.document-viewer {
+  z-index: 40;
+}
+
+.message-list {
+  z-index: 30;
+}
+
+.message-input {
+  z-index: 50;
+}
