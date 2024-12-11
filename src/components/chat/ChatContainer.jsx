@@ -1,12 +1,12 @@
 // src/components/chat/ChatContainer.jsx
 import React from 'react';
-import ChatHeader from './ChatHeader.jsx';
-import MessageList from './MessageList.jsx';
-import MessageInput from './MessageInput.jsx';
-import { useMessages } from '../../hooks/useMessages.js';
-import { useWebSocket } from '../../hooks/useWebSocket.js';
+import ChatHeader from './ChatHeader';
+import MessageList from './MessageList';
+import MessageInput from './MessageInput';
+import { useMessages } from '../../hooks/useMessages';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
-export const ChatContainer = () => {
+const ChatContainer = () => {
   const { messages, sendMessage, isLoading } = useMessages();
   const { connected } = useWebSocket();
 
@@ -24,3 +24,6 @@ export const ChatContainer = () => {
     </div>
   );
 };
+
+// Ajout de l'export par défaut
+export default ChatContainer;
