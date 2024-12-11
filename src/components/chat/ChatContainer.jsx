@@ -13,9 +13,7 @@ const ChatContainer = () => {
   return (
     <div className="flex flex-col h-screen">
       <ChatHeader connected={connected} />
-      <div className="flex-1 overflow-hidden">
-        <MessageList messages={messages} />
-      </div>
+      <MessageList messages={messages} />
       <MessageInput 
         onSend={sendMessage} 
         isLoading={isLoading} 
@@ -25,5 +23,4 @@ const ChatContainer = () => {
   );
 };
 
-// Ajout de l'export par défaut
 export default ChatContainer;
