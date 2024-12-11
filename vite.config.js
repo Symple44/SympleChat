@@ -9,8 +9,7 @@ export default defineConfig({
       '/api': {
         target: 'http://192.168.0.15:8000',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path
+        secure: false
       },
       '/ws': {
         target: 'ws://192.168.0.15:8000',
