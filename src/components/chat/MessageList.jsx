@@ -4,13 +4,18 @@ import DocumentPreview from './DocumentPreview';
 import DocumentViewer from './DocumentViewer';
 import { useTheme } from '../../context/ThemeContext';
 
-const MessageList = ({ messages }) => {
+const MessageList = ({ messages, error }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const { isDark } = useTheme();
 
   return (
     <>
       <div className="h-full overflow-y-auto px-4 py-6">
+        {error && (
+          <div className="bg-red-100 dark:bg-red-900 border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded relative my-4">
+            {error}
+          </div>
+        )}
         {messages.map((msg) => (
           <div
             key={msg.id}
