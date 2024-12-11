@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { ChatProvider } from './context/ChatContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Home from './pages/Home';
 import App from './App';
 import './styles/main.css';
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('chat-root')).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <ThemeProvider>
+      <ChatProvider>
+        <App />
+      </ChatProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );
