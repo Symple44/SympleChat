@@ -8,7 +8,7 @@ const ChatHeader = ({ connected }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MessageCircle className="w-6 h-6 text-blue-600" />
-          <h1 className="text-lg font-semibold">Assistant CM Manager</h1>
+          <h1 className="text-lg font-semibold">Assistant 2CM Manager</h1>
         </div>
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${
