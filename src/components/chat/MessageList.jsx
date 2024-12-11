@@ -9,23 +9,23 @@ const MessageList = ({ messages }) => {
   const { isDark } = useTheme();
 
   return (
-    <div className={`flex-1 overflow-hidden ${selectedDocument ? 'mr-1/2' : ''}`}>
+    <>
       <div className="h-full overflow-y-auto px-4 py-6">
-        {messages.map((msg) => (  // Changé 'message' en 'msg' ici
+        {messages.map((msg) => (
           <div
-            key={msg.id}  // Utiliser msg au lieu de message
+            key={msg.id}
             className={`flex mb-4 ${
-              msg.type === 'user' ? 'justify-end' : 'justify-start'  // msg au lieu de message
+              msg.type === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
             <div
               className={`max-w-[80%] rounded-lg p-4 ${
-                msg.type === 'user'  // msg au lieu de message
+                msg.type === 'user'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
               }`}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>  {/* msg au lieu de message */}
+              <p className="whitespace-pre-wrap">{msg.content}</p>
               {msg.type === 'assistant' && msg.fragments && msg.fragments.length > 0 && (
                 <div className="mt-4">
                   {msg.fragments.map((doc, index) => (
@@ -38,7 +38,7 @@ const MessageList = ({ messages }) => {
                 </div>
               )}
               <span className="text-xs opacity-75 mt-2 block">
-                {msg.timestamp}  {/* msg au lieu de message */}
+                {msg.timestamp}
               </span>
             </div>
           </div>
@@ -51,7 +51,7 @@ const MessageList = ({ messages }) => {
           onClose={() => setSelectedDocument(null)} 
         />
       )}
-    </div>
+    </>
   );
 };
 
