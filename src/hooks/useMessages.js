@@ -1,8 +1,6 @@
 // src/hooks/useMessages.js
 import { useState, useEffect } from 'react';
 
-const API_URL = 'http://192.168.0.15:8000';
-
 export const useMessages = () => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -12,7 +10,8 @@ export const useMessages = () => {
   const loadMessageHistory = async () => {
     console.log('Chargement historique...');
     try {
-      const response = await fetch(`${API_URL}/api/chat/history/${userId}`, {
+      // Modifié pour correspondre à la route existante
+      const response = await fetch('/api/chat/history/oweo', {
         method: 'GET',
         headers: {
           'Accept': 'application/json'
@@ -33,8 +32,8 @@ export const useMessages = () => {
 
       const formattedMessages = data.map(msg => ({
         id: msg.id || Date.now(),
-        content: msg.query || msg.response,
-        type: msg.query ? 'user' : 'assistant',
+        content: msg.content || msg.response,  // Adapté selon la structure de ta réponse
+        type: msg.type || (msg.query ? 'user' : 'assistant'),
         timestamp: new Date(msg.timestamp).toLocaleTimeString()
       }));
 
@@ -51,17 +50,16 @@ export const useMessages = () => {
     try {
       setIsLoading(true);
 
-      // Ajout du message utilisateur immédiatement
       const userMessage = {
         id: Date.now(),
-        content: content,
+        content,
         type: 'user',
         timestamp: new Date().toLocaleTimeString()
       };
       setMessages(prev => [...prev, userMessage]);
 
-      console.log('Envoi message:', { user_id: userId, query: content });
-      const response = await fetch(`${API_URL}/api/chat`, {
+      // Modifié pour utiliser le proxy configuré
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,9 +72,6 @@ export const useMessages = () => {
         })
       });
 
-      console.log('Status:', response.status);
-      console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         const text = await response.text();
         console.error('Réponse erreur:', text);
@@ -84,8 +79,7 @@ export const useMessages = () => {
       }
 
       const data = await response.json();
-      console.log('Réponse reçue:', data);
-
+      
       const assistantMessage = {
         id: Date.now() + 1,
         content: data.response,
@@ -111,7 +105,6 @@ export const useMessages = () => {
     messages,
     sendMessage,
     isLoading,
-    error,
-    refreshHistory: loadMessageHistory
+    error
   };
 };
