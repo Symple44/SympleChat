@@ -1,88 +1,158 @@
-// src/hooks/useMessages.js
-import { useState, useEffect } from 'react';
-import { formatTimestamp } from '../utils/dateFormatter';
+import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE_URL = 'http://192.168.0.15:8000/api';
+const API_BASE_URL = '/api';
+const DEFAULT_USER_ID = 'oweo';
 
-export const useMessages = () => {
+export const useMessages = (userId = DEFAULT_USER_ID) => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const userId = 'oweo';
+  const [error, setError] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
 
-  const sendMessage = async (content) => {
-    if (!content.trim() || isLoading) return;
-
-    // Création du message utilisateur
-    const userMessage = {
-      id: Date.now(),
-      content,
-      type: 'user',
-      timestamp: formatTimestamp(new Date()),
+  // Initialisation de la session et chargement de l'historique
+  useEffect(() => {
+    const initializeSession = async () => {
+      try {
+        // Vérifier s'il existe une session en cours
+        const savedSessionId = localStorage.getItem('chatSessionId');
+        
+        if (savedSessionId) {
+          setSessionId(savedSessionId);
+          await loadSessionHistory(savedSessionId);
+        } else {
+          // Créer une nouvelle session
+          await createNewSession();
+        }
+      } catch (err) {
+        setError('Erreur lors de l\'initialisation de la session');
+        console.error('Erreur session:', err);
+      }
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
+    initializeSession();
+  }, [userId]);
 
+  // Création d'une nouvelle session
+  const createNewSession = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${API_BASE_URL}/chat/session/new`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          query: content,
-          session_id: null, // Si nous voulons gérer les sessions
-          language: 'fr',
-          application: null, // Si nous voulons filtrer par application
-          context: {} // Pour le contexte supplémentaire si nécessaire
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error('Erreur création session');
+      
       const data = await response.json();
+      setSessionId(data.session_id);
+      localStorage.setItem('chatSessionId', data.session_id);
+      
+      return data.session_id;
+    } catch (err) {
+      setError('Erreur lors de la création de la session');
+      console.error('Erreur création session:', err);
+      return null;
+    }
+  };
 
-      // Création du message assistant
-      const assistantMessage = {
-        id: Date.now(),
-        content: data.response,
-        type: 'assistant',
-        fragments: data.fragments || [],
-        timestamp: formatTimestamp(new Date()),
-        documents_used: data.documents_used || []
-      };
+  // Chargement de l'historique d'une session
+  const loadSessionHistory = async (sid) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/chat/session/${sid}/history`);
+      
+      if (!response.ok) throw new Error('Erreur chargement historique');
+      
+      const history = await response.json();
+      
+      // Formatage des messages
+      const formattedMessages = history.map(msg => ({
+        id: msg.id || Date.now(),
+        content: msg.query || msg.response,
+        type: msg.query ? 'user' : 'assistant',
+        fragments: msg.fragments || [],
+        documents_used: msg.documents_used || [],
+        timestamp: new Date(msg.timestamp).toLocaleTimeString(),
+        confidence_score: msg.confidence_score
+      }));
 
-      setMessages(prev => [...prev, assistantMessage]);
-
-      // Sauvegarder dans l'historique
-      await saveToHistory({
-        user_message: userMessage,
-        assistant_message: assistantMessage,
-        documents: data.documents_used,
-        confidence_score: data.confidence_score
-      });
-
-    } catch (error) {
-      console.error('Erreur envoi message:', error);
+      setMessages(formattedMessages);
+    } catch (err) {
+      setError('Erreur lors du chargement de l\'historique');
+      console.error('Erreur chargement historique:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fonction pour sauvegarder dans l'historique
+  // Envoi d'un message
+  const sendMessage = useCallback(async (content) => {
+    if (!content.trim() || !sessionId) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Ajout du message utilisateur à l'interface
+      const userMessage = {
+        id: Date.now(),
+        content,
+        type: 'user',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessages(prev => [...prev, userMessage]);
+
+      // Envoi au backend
+      const response = await fetch(`${API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          query: content,
+          session_id: sessionId,
+          language: 'fr'
+        })
+      });
+
+      if (!response.ok) throw new Error('Erreur communication serveur');
+      
+      const data = await response.json();
+
+      // Ajout de la réponse à l'interface
+      const assistantMessage = {
+        id: Date.now() + 1,
+        content: data.response,
+        type: 'assistant',
+        fragments: data.fragments || [],
+        documents_used: data.documents_used || [],
+        confidence_score: data.confidence_score,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // Sauvegarde dans l'historique
+      await saveToHistory({
+        user_message: userMessage,
+        assistant_message: assistantMessage,
+        session_id: sessionId
+      });
+
+    } catch (err) {
+      setError('Erreur lors de l\'envoi du message');
+      console.error('Erreur envoi message:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [sessionId, userId]);
+
+  // Sauvegarde dans l'historique
   const saveToHistory = async (chatData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/chat/save`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
-          session_id: null,
+          session_id: chatData.session_id,
           user_message: {
             content: chatData.user_message.content,
             timestamp: chatData.user_message.timestamp
@@ -90,54 +160,50 @@ export const useMessages = () => {
           assistant_message: {
             content: chatData.assistant_message.content,
             timestamp: chatData.assistant_message.timestamp,
-            documents_used: chatData.documents,
-            confidence_score: chatData.confidence_score
+            documents_used: chatData.assistant_message.documents_used,
+            confidence_score: chatData.assistant_message.confidence_score
           }
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Erreur de sauvegarde dans l\'historique');
-      }
-    } catch (error) {
-      console.error('Erreur sauvegarde historique:', error);
+      if (!response.ok) throw new Error('Erreur sauvegarde historique');
+    } catch (err) {
+      console.error('Erreur sauvegarde historique:', err);
     }
   };
 
-  const loadMessageHistory = async () => {
+  // Suppression de l'historique d'une session
+  const clearSessionHistory = useCallback(async () => {
+    if (!sessionId) return;
+
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/history/${userId}`);
-      if (!response.ok) throw new Error('Erreur chargement historique');
-
-      const data = await response.json();
-
-      // Transformation des données d'historique en format message
-      const formattedMessages = data.flatMap(item => ([
-        {
-          id: Date.now() + '-user',
-          content: item.query,
-          type: 'user',
-          timestamp: item.timestamp
-        },
-        {
-          id: Date.now() + '-assistant',
-          content: item.response,
-          type: 'assistant',
-          fragments: item.fragments || [],
-          documents_used: item.documents_used || [],
-          timestamp: item.timestamp
-        }
-      ]));
-
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Erreur chargement historique:', error);
+      await fetch(`${API_BASE_URL}/chat/session/${sessionId}/clear`, {
+        method: 'POST'
+      });
+      setMessages([]);
+    } catch (err) {
+      setError('Erreur lors de la suppression de l\'historique');
+      console.error('Erreur suppression historique:', err);
     }
-  };
+  }, [sessionId]);
 
-  useEffect(() => {
-    loadMessageHistory();
+  // Démarrage d'une nouvelle session
+  const startNewSession = useCallback(async () => {
+    localStorage.removeItem('chatSessionId');
+    setMessages([]);
+    const newSessionId = await createNewSession();
+    if (newSessionId) {
+      setSessionId(newSessionId);
+    }
   }, []);
 
-  return { messages, sendMessage, isLoading };
+  return {
+    messages,
+    isLoading,
+    error,
+    sessionId,
+    sendMessage,
+    clearSessionHistory,
+    startNewSession
+  };
 };
