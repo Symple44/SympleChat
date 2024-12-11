@@ -1,67 +1,49 @@
-// src/hooks/useMessages.js
 import { useState, useEffect } from 'react';
 
-const API_BASE_URL = '/api';
-const DEFAULT_USER_ID = 'oweo';
-
-export const useMessages = (userId = DEFAULT_USER_ID) => {
+export const useMessages = () => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const userId = 'oweo';
 
-  // Chargement initial de l'historique
-  useEffect(() => {
-    loadMessageHistory();
-  }, []);
-
-  // Chargement de l'historique
   const loadMessageHistory = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/chat/history/${userId}`);
-      if (!response.ok) throw new Error('Erreur chargement historique');
+      const response = await fetch(`/api/chat/history/${userId}`);
       
+      // Log pour debug
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Response error:', text);
+        throw new Error(`Server responded with ${response.status}: ${text}`);
+      }
+
       const data = await response.json();
-      
-      // Formatage des messages de l'historique
-      const formattedMessages = data.map(msg => ({
+      setMessages(data.map(msg => ({
         id: msg.id || Date.now(),
         content: msg.query || msg.response,
         type: msg.query ? 'user' : 'assistant',
-        fragments: msg.fragments || [],
-        documents_used: msg.documents_used || [],
         timestamp: new Date(msg.timestamp).toLocaleTimeString()
-      }));
-
-      setMessages(formattedMessages);
+      })));
     } catch (err) {
-      console.error('Erreur chargement historique:', err);
-      setError('Erreur lors du chargement de l\'historique');
-    } finally {
-      setIsLoading(false);
+      console.error('Erreur détaillée:', err);
+      setError(err.message);
     }
   };
 
-  // Envoi d'un message
   const sendMessage = async (content) => {
     if (!content.trim() || isLoading) return;
 
     try {
       setIsLoading(true);
-      
-      // Ajout du message utilisateur à l'interface
-      const userMessage = {
-        id: Date.now(),
-        content,
-        type: 'user',
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setMessages(prev => [...prev, userMessage]);
-
-      // Envoi au backend
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           user_id: userId,
           query: content,
@@ -69,32 +51,54 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
         })
       });
 
-      if (!response.ok) throw new Error('Erreur communication serveur');
-      
-      const data = await response.json();
+      // Log pour debug
+      const contentType = response.headers.get('content-type');
+      console.log('Response Content-Type:', contentType);
 
-      // Ajout de la réponse à l'interface
-      const assistantMessage = {
-        id: Date.now() + 1,
-        content: data.response,
-        type: 'assistant',
-        fragments: data.fragments || [],
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setMessages(prev => [...prev, assistantMessage]);
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Server response:', text);
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      const newMessages = [
+        // Message utilisateur
+        {
+          id: Date.now(),
+          content: content,
+          type: 'user',
+          timestamp: new Date().toLocaleTimeString()
+        },
+        // Réponse assistant
+        {
+          id: Date.now() + 1,
+          content: data.response,
+          type: 'assistant',
+          fragments: data.fragments || [],
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ];
+
+      setMessages(prev => [...prev, ...newMessages]);
 
     } catch (err) {
-      console.error('Erreur envoi message:', err);
+      console.error('Erreur détaillée:', err);
       setError('Erreur lors de l\'envoi du message');
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadMessageHistory();
+  }, []);
+
   return {
     messages,
+    sendMessage,
     isLoading,
-    error,
-    sendMessage
+    error
   };
 };
