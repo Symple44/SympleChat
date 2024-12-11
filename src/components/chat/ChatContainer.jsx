@@ -7,22 +7,33 @@ import { useMessages } from '../../hooks/useMessages';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useTheme } from '../../context/ThemeContext';
 
-// src/components/chat/ChatContainer.jsx
 const ChatContainer = () => {
   const { isDark } = useTheme();
-  const { messages, sendMessage, isLoading } = useMessages();
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    sessionId
+  } = useMessages();
   const { connected } = useWebSocket();
 
   return (
     <div className="flex flex-col h-screen">
-      <ChatHeader connected={connected} />
+      <ChatHeader 
+        connected={connected} 
+        sessionId={sessionId}
+      />
       <div className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-900">
-        <MessageList messages={messages} />
+        <MessageList 
+          messages={messages} 
+          error={error}
+        />
       </div>
       <MessageInput 
-        onSend={sendMessage} 
-        isLoading={isLoading} 
-        disabled={!connected} 
+        onSend={sendMessage}
+        isLoading={isLoading}
+        disabled={!connected}
       />
     </div>
   );
