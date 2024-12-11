@@ -1,84 +1,38 @@
-// src/hooks/useMessages.js
-import { useState, useEffect } from 'react';
-import { formatTimestamp } from '../utils/dateFormatter';
+// src/hooks/useChat.js
+import { useState, useEffect, useCallback } from 'react';
+import { useWebSocket } from './useWebSocket';
+import { useMessages } from './useMessages';
 
-export const useMessages = () => {
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const userId = 'oweo';
+// Changez l'export pour être par défaut
+export default function useChat() {
+  const [error, setError] = useState(null);
+  const { connected, sendSocketMessage } = useWebSocket();
+  const { messages, sendMessage, isLoading } = useMessages();
+
+  const handleSendMessage = useCallback(
+    async (content) => {
+      try {
+        await sendMessage(content);
+      } catch (err) {
+        setError('Erreur lors de l\'envoi du message');
+      }
+    },
+    [sendMessage]
+  );
 
   useEffect(() => {
-    loadMessageHistory();
-  }, []);
-
-  const loadMessageHistory = async () => {
-    try {
-      const response = await fetch(`/api/chat/history/${userId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      
-      console.log("Réponse historique:", data); // Debug
-      
-      const formattedMessages = data.map(msg => ({
-        id: msg.id || Date.now(),
-        content: msg.query || msg.response,
-        type: msg.query ? 'user' : 'assistant',
-        timestamp: formatTimestamp(msg.timestamp)
-      }));
-      
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Erreur chargement historique:', error);
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
     }
+  }, [error]);
+
+  return {
+    messages,
+    isLoading,
+    error,
+    connected,
+    sendMessage: handleSendMessage,
+    sendSocketMessage,
   };
-
-  const sendMessage = async (content) => {
-    if (!content.trim() || isLoading) return;
-
-    const newMessage = {
-      id: Date.now(),
-      content,
-      type: 'user',
-      timestamp: formatTimestamp(new Date())
-    };
-
-    setMessages(prev => [...prev, newMessage]);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          query: content,
-          language: 'fr'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Réponse du serveur:", data); // Debug
-
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        content: data.response,
-        type: 'assistant',
-        timestamp: formatTimestamp(new Date())
-      }]);
-    } catch (error) {
-      console.error('Erreur envoi message:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return { messages, sendMessage, isLoading };
-};
+}
