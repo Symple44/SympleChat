@@ -11,10 +11,10 @@ const Home = () => {
             <MessageCircle className="w-16 h-16 text-blue-600" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Assistant CM Manager
+            Assistant 2CM Manager
           </h1>
           <p className="text-xl text-gray-600 mb-8">
-            Accédez instantanément à toute la documentation CM Manager
+            Accédez instantanément à toute la documentation 2CM Manager
           </p>
           <a
             href="/chat"
