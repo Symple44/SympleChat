@@ -160,7 +160,6 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
     error,
     sessionId,
     sendMessage,
-    clearSessionHistory,
     startNewSession
   };
 };
