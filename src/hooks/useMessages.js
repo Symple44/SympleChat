@@ -76,6 +76,7 @@ export const useMessages = () => {
         id: Date.now(),
         content: data.response,
         type: 'assistant',
+        fragments: data.fragments,
         timestamp: formatTimestamp(new Date())
       }]);
     } catch (error) {
