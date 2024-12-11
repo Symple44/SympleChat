@@ -14,9 +14,13 @@ export const useMessages = () => {
   const loadMessageHistory = async () => {
     try {
       const response = await fetch(`/api/chat/history/${userId}`);
-      if (!response.ok) throw new Error('Erreur chargement historique');
-      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
+      
+      console.log("Réponse historique:", data); // Debug
+      
       const formattedMessages = data.map(msg => ({
         id: msg.id || Date.now(),
         content: msg.query || msg.response,
@@ -51,13 +55,18 @@ export const useMessages = () => {
         },
         body: JSON.stringify({
           user_id: userId,
-          query: content
+          query: content,
+          language: 'fr'
         })
       });
 
-      if (!response.ok) throw new Error('Erreur envoi message');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
+      console.log("Réponse du serveur:", data); // Debug
+
       setMessages(prev => [...prev, {
         id: Date.now(),
         content: data.response,
