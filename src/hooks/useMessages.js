@@ -1,3 +1,4 @@
+// src/hooks/useMessages.js
 import { useState, useEffect } from 'react';
 
 export const useMessages = () => {
@@ -8,10 +9,10 @@ export const useMessages = () => {
 
   const loadMessageHistory = async () => {
     try {
-      console.log('Chargement historique...');
+      console.log("Chargement historique...");
+      // Route correcte selon l'OpenAPI
       const response = await fetch(`/api/history/user/${userId}`);
       
-      // Log pour debug
       console.log('Status:', response.status);
       console.log('Content-Type:', response.headers.get('content-type'));
 
@@ -44,7 +45,6 @@ export const useMessages = () => {
     try {
       setIsLoading(true);
       
-      // Ajout du message utilisateur immédiatement
       const userMessage = {
         id: Date.now(),
         content,
@@ -53,8 +53,8 @@ export const useMessages = () => {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      console.log('Envoi message:', { content });
-      const response = await fetch('/api/chat', {
+      // Route correcte selon l'OpenAPI
+      const response = await fetch('/api/chat/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
