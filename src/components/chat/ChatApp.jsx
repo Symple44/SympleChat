@@ -1,15 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, Loader2 } from 'lucide-react';
+import { useMessages } from '../hooks/useMessages';
 
 const userId = 'oweo'; // User ID en dur comme demandé
 
 export default function ChatApp() {
-  const [messages, setMessages] = useState([]);
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    clearSessionHistory,
+    startNewSession
+  } = useMessages();
   const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const messagesEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!inputMessage.trim() || isLoading) return;
+    
+    await sendMessage(inputMessage);
+    setInputMessage('');
+  };
 
   useEffect(() => {
     // Charger l'historique des messages au démarrage
