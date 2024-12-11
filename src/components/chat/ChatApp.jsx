@@ -90,7 +90,7 @@ export default function ChatApp() {
       <header className="bg-white shadow px-6 py-4">
         <div className="flex items-center gap-2">
           <MessageCircle className="w-6 h-6 text-blue-600" />
-          <h1 className="text-xl font-semibold text-gray-800">Assistant CM Manager</h1>
+          <h1 className="text-xl font-semibold text-gray-800">Assistant 2CM Manager</h1>
         </div>
       </header>
 
