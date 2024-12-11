@@ -1,4 +1,3 @@
-// src/hooks/useMessages.js
 import { useState, useEffect } from 'react';
 
 export const useMessages = () => {
@@ -9,20 +8,21 @@ export const useMessages = () => {
 
   const loadMessageHistory = async () => {
     try {
-      console.log('Début chargement historique');
-      // Puisque router.py a la route /api/chat/history/{user_id}
-      const response = await fetch(`/api/chat/history/${userId}`);
-
+      console.log('Chargement historique...');
+      const response = await fetch(`/api/history/user/${userId}`);
+      
+      // Log pour debug
       console.log('Status:', response.status);
+      console.log('Content-Type:', response.headers.get('content-type'));
 
       if (!response.ok) {
         const text = await response.text();
-        console.log('Réponse erreur:', text);
-        throw new Error(`Erreur serveur: ${response.status}`);
+        console.error('Réponse erreur:', text);
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Données reçues:', data);
+      console.log('Data reçue:', data);
 
       const formattedMessages = data.map(msg => ({
         id: msg.id || Date.now(),
@@ -33,7 +33,7 @@ export const useMessages = () => {
 
       setMessages(formattedMessages);
     } catch (err) {
-      console.error('Erreur chargement historique:', err);
+      console.error('Erreur détaillée:', err);
       setError('Erreur lors du chargement de l\'historique');
     }
   };
@@ -44,6 +44,7 @@ export const useMessages = () => {
     try {
       setIsLoading(true);
       
+      // Ajout du message utilisateur immédiatement
       const userMessage = {
         id: Date.now(),
         content,
@@ -52,11 +53,12 @@ export const useMessages = () => {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // Route /api/chat dans router.py
+      console.log('Envoi message:', { content });
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           user_id: userId,
@@ -65,12 +67,10 @@ export const useMessages = () => {
         })
       });
 
-      console.log('Status requête:', response.status);
-
       if (!response.ok) {
         const text = await response.text();
-        console.log('Réponse erreur:', text);
-        throw new Error(`Erreur serveur: ${response.status}`);
+        console.error('Réponse erreur:', text);
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const data = await response.json();
@@ -83,8 +83,8 @@ export const useMessages = () => {
         fragments: data.fragments || [],
         timestamp: new Date().toLocaleTimeString()
       };
-      setMessages(prev => [...prev, assistantMessage]);
 
+      setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
       console.error('Erreur envoi message:', err);
       setError('Erreur lors de l\'envoi du message');
@@ -99,8 +99,8 @@ export const useMessages = () => {
 
   return {
     messages,
+    sendMessage,
     isLoading,
-    error,
-    sendMessage
+    error
   };
 };
