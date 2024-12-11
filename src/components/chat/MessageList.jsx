@@ -2,31 +2,33 @@
 import React, { useState } from 'react';
 import DocumentPreview from './DocumentPreview';
 import DocumentViewer from './DocumentViewer';
+import { useTheme } from '../../context/ThemeContext';
 
 const MessageList = ({ messages }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const { isDark } = useTheme();
 
   return (
-    <div className={`max-w-[80%] rounded-lg p-4 ${ message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' }`}>
+    <div className={`flex-1 overflow-hidden ${selectedDocument ? 'mr-1/2' : ''}`}>
       <div className="h-full overflow-y-auto px-4 py-6">
-        {messages.map((message) => (
+        {messages.map((msg) => (  // Changé 'message' en 'msg' ici
           <div
-            key={message.id}
+            key={msg.id}  // Utiliser msg au lieu de message
             className={`flex mb-4 ${
-              message.type === 'user' ? 'justify-end' : 'justify-start'
+              msg.type === 'user' ? 'justify-end' : 'justify-start'  // msg au lieu de message
             }`}
           >
             <div
               className={`max-w-[80%] rounded-lg p-4 ${
-                message.type === 'user'
+                msg.type === 'user'  // msg au lieu de message
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-900'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
               }`}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
-              {message.type === 'assistant' && message.fragments && message.fragments.length > 0 && (
+              <p className="whitespace-pre-wrap">{msg.content}</p>  {/* msg au lieu de message */}
+              {msg.type === 'assistant' && msg.fragments && msg.fragments.length > 0 && (
                 <div className="mt-4">
-                  {message.fragments.map((doc, index) => (
+                  {msg.fragments.map((doc, index) => (
                     <DocumentPreview
                       key={index}
                       document={doc}
@@ -36,7 +38,7 @@ const MessageList = ({ messages }) => {
                 </div>
               )}
               <span className="text-xs opacity-75 mt-2 block">
-                {message.timestamp}
+                {msg.timestamp}  {/* msg au lieu de message */}
               </span>
             </div>
           </div>
