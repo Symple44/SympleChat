@@ -1,6 +1,6 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext } from 'react';
-import { useChat } from '../hooks/useChat';
+import useChat from '../hooks/useChat'; 
 
 const ChatContext = createContext(null);
 
