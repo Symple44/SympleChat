@@ -14,25 +14,29 @@ const MessageInput = ({ onSend, isLoading, disabled }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t bg-white">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Votre message..."
-          className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          disabled={isLoading || disabled}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || disabled || !message.trim()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          <Send className="w-5 h-5" />
-        </button>
-      </div>
-    </form>
+    <div className="border-t dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      <form onSubmit={/* ... */}>
+        <div className="flex space-x-4">
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="flex-1 rounded-lg border dark:border-gray-600 px-4 py-2 
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Votre message..."
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg 
+                     hover:bg-blue-700 disabled:opacity-50"
+            disabled={isLoading}
+          >
+            Envoyer
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
