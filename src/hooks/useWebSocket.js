@@ -10,19 +10,32 @@ export const useWebSocket = () => {
       const ws = new WebSocket(import.meta.env.VITE_WS_URL);
 
       ws.onopen = () => {
-        setConnected(true);
         console.log('WebSocket connecté');
+        setConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        console.log('Message reçu:', event.data);
+        try {
+          const data = JSON.parse(event.data);
+          // Gérer le message reçu
+          if (data.type === 'assistant') {
+            // Mettre à jour l'interface avec la réponse
+            console.log('Réponse de l\'assistant:', data.content);
+          }
+        } catch (error) {
+          console.error('Erreur parsing message:', error);
+        }
       };
 
       ws.onclose = () => {
+        console.log('WebSocket déconnecté');
         setConnected(false);
-        console.log('WebSocket déconnecté, reconnexion...');
         setTimeout(connect, 3000);
       };
 
       ws.onerror = (error) => {
         console.error('Erreur WebSocket:', error);
-        ws.close();
       };
 
       setSocket(ws);
@@ -30,6 +43,21 @@ export const useWebSocket = () => {
       console.error('Erreur connexion WebSocket:', error);
     }
   }, []);
+
+  const sendMessage = useCallback((message) => {
+    if (socket?.readyState === WebSocket.OPEN) {
+      const messageData = {
+        type: 'user',
+        content: message,
+        timestamp: new Date().toISOString()
+      };
+      console.log('Envoi message:', messageData);
+      socket.send(JSON.stringify(messageData));
+      return true;
+    }
+    console.warn('WebSocket non connecté');
+    return false;
+  }, [socket]);
 
   useEffect(() => {
     connect();
@@ -39,12 +67,6 @@ export const useWebSocket = () => {
       }
     };
   }, [connect]);
-
-  const sendMessage = useCallback((message) => {
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
-    }
-  }, [socket]);
 
   return { connected, sendMessage };
 };
