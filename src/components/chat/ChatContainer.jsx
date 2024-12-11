@@ -5,6 +5,7 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { useMessages } from '../../hooks/useMessages';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useTheme } from '../../context/ThemeContext';
 
 // src/components/chat/ChatContainer.jsx
 const ChatContainer = () => {
