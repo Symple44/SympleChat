@@ -1,13 +1,15 @@
 // src/hooks/useWebSocket.js
 import { useState, useEffect, useCallback } from 'react';
 
+const WS_URL = 'ws://192.168.0.15:8000/ws';
+
 export const useWebSocket = () => {
   const [connected, setConnected] = useState(false);
   const [socket, setSocket] = useState(null);
 
   const connect = useCallback(() => {
     try {
-      const ws = new WebSocket(import.meta.env.VITE_WS_URL);
+      const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
         console.log('WebSocket connecté');
@@ -16,16 +18,6 @@ export const useWebSocket = () => {
 
       ws.onmessage = (event) => {
         console.log('Message reçu:', event.data);
-        try {
-          const data = JSON.parse(event.data);
-          // Gérer le message reçu
-          if (data.type === 'assistant') {
-            // Mettre à jour l'interface avec la réponse
-            console.log('Réponse de l\'assistant:', data.content);
-          }
-        } catch (error) {
-          console.error('Erreur parsing message:', error);
-        }
       };
 
       ws.onclose = () => {
