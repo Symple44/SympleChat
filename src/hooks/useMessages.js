@@ -10,11 +10,10 @@ export const useMessages = () => {
   const loadMessageHistory = async () => {
     try {
       console.log('Début chargement historique');
+      // Puisque router.py a la route /api/chat/history/{user_id}
       const response = await fetch(`/api/chat/history/${userId}`);
 
-      // Pour debug
-      const contentType = response.headers.get('content-type');
-      console.log('Content-Type:', contentType);
+      console.log('Status:', response.status);
 
       if (!response.ok) {
         const text = await response.text();
@@ -23,6 +22,8 @@ export const useMessages = () => {
       }
 
       const data = await response.json();
+      console.log('Données reçues:', data);
+
       const formattedMessages = data.map(msg => ({
         id: msg.id || Date.now(),
         content: msg.query || msg.response,
@@ -42,8 +43,7 @@ export const useMessages = () => {
 
     try {
       setIsLoading(true);
-
-      // Message utilisateur
+      
       const userMessage = {
         id: Date.now(),
         content,
@@ -52,6 +52,7 @@ export const useMessages = () => {
       };
       setMessages(prev => [...prev, userMessage]);
 
+      // Route /api/chat dans router.py
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -64,6 +65,8 @@ export const useMessages = () => {
         })
       });
 
+      console.log('Status requête:', response.status);
+
       if (!response.ok) {
         const text = await response.text();
         console.log('Réponse erreur:', text);
@@ -71,13 +74,16 @@ export const useMessages = () => {
       }
 
       const data = await response.json();
-      setMessages(prev => [...prev, {
+      console.log('Réponse reçue:', data);
+
+      const assistantMessage = {
         id: Date.now() + 1,
         content: data.response,
         type: 'assistant',
         fragments: data.fragments || [],
         timestamp: new Date().toLocaleTimeString()
-      }]);
+      };
+      setMessages(prev => [...prev, assistantMessage]);
 
     } catch (err) {
       console.error('Erreur envoi message:', err);
