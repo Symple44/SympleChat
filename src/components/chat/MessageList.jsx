@@ -1,32 +1,54 @@
 // src/components/chat/MessageList.jsx
-import React from 'react';
-import InstructionViewer from './InstructionViewer';
+import React, { useState } from 'react';
+import DocumentPreview from './DocumentPreview';
+import DocumentViewer from './DocumentViewer';
 
 const MessageList = ({ messages }) => {
-  const renderMessage = (message) => {
-    // Si le message contient des instructions documentées
-    if (message.type === 'assistant' && message.content?.steps) {
-      return <InstructionViewer instructions={message.content} />;
-    }
-    
-    // Message normal
-    return <p className="whitespace-pre-wrap">{message.content}</p>;
-  };
+  const [selectedDocument, setSelectedDocument] = useState(null);
 
   return (
-    <div className="flex flex-col gap-4 p-4 overflow-y-auto h-full">
-      {messages.map((message) => (
-        <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-          <div className={`max-w-[80%] rounded-lg p-4 ${
-            message.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100'
-          }`}>
-            {renderMessage(message)}
-            <span className="text-xs opacity-75 mt-2 block">
-              {message.timestamp}
-            </span>
+    <div className={`flex-1 overflow-hidden ${selectedDocument ? 'mr-1/2' : ''}`}>
+      <div className="h-full overflow-y-auto px-4 py-6">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex mb-4 ${
+              message.type === 'user' ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg p-4 ${
+                message.type === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-900'
+              }`}
+            >
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.type === 'assistant' && message.fragments && message.fragments.length > 0 && (
+                <div className="mt-4">
+                  {message.fragments.map((doc, index) => (
+                    <DocumentPreview
+                      key={index}
+                      document={doc}
+                      onClick={() => setSelectedDocument(doc)}
+                    />
+                  ))}
+                </div>
+              )}
+              <span className="text-xs opacity-75 mt-2 block">
+                {message.timestamp}
+              </span>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+
+      {selectedDocument && (
+        <DocumentViewer 
+          document={selectedDocument} 
+          onClose={() => setSelectedDocument(null)} 
+        />
+      )}
     </div>
   );
 };
