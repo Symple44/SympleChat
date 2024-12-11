@@ -1,4 +1,3 @@
-// src/hooks/useMessages.js
 import { useState, useEffect, useCallback } from 'react';
 
 const API_BASE_URL = '/api';
@@ -14,12 +13,14 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
   useEffect(() => {
     const initializeSession = async () => {
       try {
+        // Vérifier s'il existe une session en cours
         const savedSessionId = localStorage.getItem('chatSessionId');
         
         if (savedSessionId) {
           setSessionId(savedSessionId);
           await loadSessionHistory(savedSessionId);
         } else {
+          // Créer une nouvelle session
           await createNewSession();
         }
       } catch (err) {
@@ -31,11 +32,13 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
     initializeSession();
   }, [userId]);
 
-  // Création d'une nouvelle session - selon l'OpenAPI: /api/sessions/new
+  // Création d'une nouvelle session
   const createNewSession = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/new?user_id=${userId}`, {
-        method: 'POST'
+      const response = await fetch(`${API_BASE_URL}sessions/new?user_id=${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
       });
 
       if (!response.ok) throw new Error('Erreur création session');
@@ -52,7 +55,7 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
     }
   };
 
-  // Chargement de l'historique - selon l'OpenAPI: /api/history/session/{session_id}
+  // Chargement de l'historique d'une session
   const loadSessionHistory = async (sid) => {
     try {
       setIsLoading(true);
@@ -62,6 +65,7 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
       
       const history = await response.json();
       
+      // Formatage des messages
       const formattedMessages = history.map(msg => ({
         id: msg.id || Date.now(),
         content: msg.query || msg.response,
@@ -81,13 +85,14 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
     }
   };
 
-  // Envoi d'un message - selon l'OpenAPI: /api/chat/
+  // Envoi d'un message
   const sendMessage = useCallback(async (content) => {
     if (!content.trim() || !sessionId) return;
 
     try {
       setIsLoading(true);
       
+      // Ajout du message utilisateur à l'interface
       const userMessage = {
         id: Date.now(),
         content,
@@ -96,7 +101,8 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      const response = await fetch(`${API_BASE_URL}/chat/`, {
+      // Envoi au backend
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -111,6 +117,7 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
       
       const data = await response.json();
 
+      // Ajout de la réponse à l'interface
       const assistantMessage = {
         id: Date.now() + 1,
         content: data.response,
@@ -120,8 +127,14 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
         confidence_score: data.confidence_score,
         timestamp: new Date().toLocaleTimeString()
       };
-      
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Sauvegarde dans l'historique
+      await saveToHistory({
+        user_message: userMessage,
+        assistant_message: assistantMessage,
+        session_id: sessionId
+      });
 
     } catch (err) {
       setError('Erreur lors de l\'envoi du message');
@@ -131,11 +144,23 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
     }
   }, [sessionId, userId]);
 
+  // Démarrage d'une nouvelle session
+  const startNewSession = useCallback(async () => {
+    localStorage.removeItem('chatSessionId');
+    setMessages([]);
+    const newSessionId = await createNewSession();
+    if (newSessionId) {
+      setSessionId(newSessionId);
+    }
+  }, []);
+
   return {
     messages,
     isLoading,
     error,
     sessionId,
     sendMessage,
+    clearSessionHistory,
+    startNewSession
   };
 };
