@@ -59,7 +59,7 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
   const loadSessionHistory = async (sid) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/history/session/${sid}`);
+      const response = await fetch(`${API_BASE_URL}/chat/history/user/${userId}`);
       
       if (!response.ok) throw new Error('Erreur chargement historique');
       
