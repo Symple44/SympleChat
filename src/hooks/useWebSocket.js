@@ -1,5 +1,6 @@
 // src/hooks/useWebSocket.js
 import { useState, useEffect, useCallback } from 'react';
+import { config } from '../config';
 
 const WS_URL = 'ws://192.168.0.15:8000/ws';
 
@@ -9,6 +10,7 @@ export const useWebSocket = () => {
 
   const connect = useCallback(() => {
     try {
+      console.log('Tentative de connexion WebSocket à:', config.WS_URL);
       const ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
