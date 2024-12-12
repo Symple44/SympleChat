@@ -129,13 +129,6 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
       };
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Sauvegarde dans l'historique
-      await saveToHistory({
-        user_message: userMessage,
-        assistant_message: assistantMessage,
-        session_id: sessionId
-      });
-
     } catch (err) {
       setError('Erreur lors de l\'envoi du message');
       console.error('Erreur envoi message:', err);
