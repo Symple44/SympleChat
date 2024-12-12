@@ -1,12 +1,14 @@
 // src/config/index.js
 const isDev = import.meta.env.MODE === 'development';
-const BACKEND_HOST = isDev ? '192.168.0.15:8000' : window.location.host;
-const BACKEND_PROTOCOL = isDev ? 'http' : window.location.protocol;
-const WS_PROTOCOL = isDev ? 'ws' : (window.location.protocol === 'https:' ? 'wss' : 'ws');
+const BACKEND_HOST = '192.168.0.15:8000'; // Toujours pointer vers le backend
+const FRONTEND_HOST = window.location.host;
+const BACKEND_PROTOCOL = 'http';
+const WS_PROTOCOL = 'ws';
 
 export const config = {
   API: {
-    BASE_URL: `${BACKEND_PROTOCOL}//${BACKEND_HOST}/api`,
+    BASE_URL: `${BACKEND_PROTOCOL}://${BACKEND_HOST}/api`,
+    // WebSocket pointe toujours vers le backend
     WS_URL: `${WS_PROTOCOL}://${BACKEND_HOST}/ws`,
     ENDPOINTS: {
       CHAT: '/chat',
@@ -22,6 +24,7 @@ export const config = {
     DEFAULT_USER_ID: 'oweo',
     MAX_MESSAGE_LENGTH: 1000,
     DEFAULT_LANGUAGE: 'fr',
+    WS_RECONNECT_DELAY: 3000,
     DATE_FORMAT_OPTIONS: {
       day: '2-digit',
       month: 'long',
@@ -31,5 +34,9 @@ export const config = {
     }
   }
 };
+
+if (isDev) {
+  console.log('Configuration chargée:', config);
+}
 
 export default config;
