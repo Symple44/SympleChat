@@ -271,6 +271,32 @@ export const useMessages = () => {
     });
   }, []);
 
+   const startNewSession = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Créer une nouvelle session
+      const newSessionId = await createNewSession();
+      if (!newSessionId) {
+        throw new Error('Échec de la création de la session');
+      }
+
+      // Réinitialiser les messages
+      setMessages([]);
+      
+      // Mettre à jour la liste des sessions
+      await loadSessions();
+      
+      return newSessionId;
+    } catch (err) {
+      console.error('Erreur création nouvelle session:', err);
+      setError('Erreur lors de la création de la nouvelle session');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     messages,
     sessions,
@@ -281,7 +307,8 @@ export const useMessages = () => {
     selectSession,
     isInitialized,
     retryInitialization: () => initializeWithRetry(),
-    formatDate
+    formatDate,
+    startNewSession 
   };
 };
 
