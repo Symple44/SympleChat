@@ -5,6 +5,7 @@ import MessageInput from './MessageInput';
 import { useMessages } from '../../hooks/useMessages';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { RefreshCw } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import { config } from '../../config';
 
 const ChatContainer = () => {
@@ -21,8 +22,8 @@ const ChatContainer = () => {
   } = useMessages();
   
   const { connected } = useWebSocket();
+  const { isDark } = useTheme();
 
-  // Chargement initial des sessions et création d'une nouvelle session si nécessaire
   useEffect(() => {
     const initializeChat = async () => {
       console.log('Initialisation du chat...');
@@ -30,7 +31,6 @@ const ChatContainer = () => {
         await loadSessions();
         console.log('Sessions chargées:', sessions);
         
-        // Si pas de session active et pas de sessions existantes, en créer une nouvelle
         if (!sessionId && (!sessions || sessions.length === 0)) {
           console.log('Création d\'une nouvelle session...');
           await createNewSession();
@@ -43,20 +43,11 @@ const ChatContainer = () => {
     initializeChat();
   }, []);
 
-  // Debug info
-  console.log('État actuel:', {
-    sessionsCount: sessions?.length || 0,
-    currentSessionId: sessionId,
-    messagesCount: messages?.length || 0,
-    connected,
-    isLoading
-  });
-
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8 rounded-lg bg-white shadow-lg">
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="text-center p-8 rounded-lg bg-white dark:bg-gray-800 shadow-lg">
+          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -78,21 +69,12 @@ const ChatContainer = () => {
         onSelectSession={changeSession}
         onNewSession={createNewSession}
       />
-      <div className="flex-1 relative overflow-hidden bg-gray-50">
+      <div className={`flex-1 relative overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
         <MessageList 
           messages={messages} 
           isLoading={isLoading}
           currentSessionId={sessionId}
         />
-        {/* Debug panel */}
-        <div className="fixed bottom-20 left-0 right-0 bg-gray-100 p-2 text-xs font-mono border-t">
-          <div className="container mx-auto flex justify-between items-center">
-            <span>User: {config.CHAT.DEFAULT_USER_ID}</span>
-            <span>Sessions: {sessions?.length || 0}</span>
-            <span>Session ID: {sessionId || 'Aucune'}</span>
-            <span>Connected: {connected ? 'Oui' : 'Non'}</span>
-          </div>
-        </div>
       </div>
       <MessageInput 
         onSend={sendMessage}
