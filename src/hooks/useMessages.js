@@ -95,18 +95,6 @@ export const useMessages = () => {
   }
 };
 
-      const sessionList = Object.values(sessionMap).sort(
-        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-      );
-
-      setSessions(sessionList);
-      return sessionList;
-    } catch (err) {
-      console.error('Erreur chargement sessions:', err);
-      throw err;
-    }
-  };
-
   // Chargement de l'historique d'une session
   const loadSessionHistory = async (sid) => {
     try {
