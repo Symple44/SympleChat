@@ -1,9 +1,9 @@
 // src/components/chat/ChatHeader.jsx
 import React, { useState } from 'react';
-import { MessageCircle, Moon, Sun, Book, BookOpen } from 'lucide-react';
+import { MessageCircle, Moon, Sun, Book, BookOpen, Plus } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
-const ChatHeader = ({ connected, sessionId, onSelectSession, sessions }) => {
+const ChatHeader = ({ connected, sessionId, onSelectSession, sessions, onNewSession }) => {
   const { isDark, toggleTheme } = useTheme();
   const [showSessions, setShowSessions] = useState(false);
 
@@ -54,12 +54,22 @@ const ChatHeader = ({ connected, sessionId, onSelectSession, sessions }) => {
       </div>
 
       {/* Liste des sessions */}
-      {showSessions && sessions && sessions.length > 0 && (
+      {showSessions && sessions && sessions.length >= 0 && (
         <div className="absolute left-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 shadow-lg rounded-lg border dark:border-gray-700 max-h-[70vh] overflow-y-auto z-50">
-          <div className="p-3 border-b dark:border-gray-700">
+          <div className="p-3 border-b dark:border-gray-700 flex justify-between items-center">
             <h2 className="font-medium text-gray-900 dark:text-white">
-              Sessions récentes
+              Sessions ouvertes
             </h2>
+            <button
+              onClick={() => {
+                onNewSession();
+                setShowSessions(false);
+              }}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              title="Nouvelle session"
+            >
+              <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </button>
           </div>
           <div className="divide-y dark:divide-gray-700">
             {sessions.map((session) => (
@@ -69,7 +79,8 @@ const ChatHeader = ({ connected, sessionId, onSelectSession, sessions }) => {
                   onSelectSession(session.session_id);
                   setShowSessions(false);
                 }}
-                className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer 
+                  ${session.session_id === sessionId ? 'bg-blue-50 dark:bg-blue-900' : ''}`}
               >
                 <p className="text-sm text-gray-900 dark:text-white mb-1">
                   {new Date(session.timestamp).toLocaleDateString('fr-FR', {
