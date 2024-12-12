@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { config } from '../config';
 
 const generateSessionId = () => {
-  // Création d'un ID unique basé sur l'appareil et l'heure
   const deviceInfo = window.navigator.userAgent;
   const timestamp = Date.now();
   const randomStr = Math.random().toString(36).substring(7);
@@ -21,80 +20,10 @@ const sortMessagesByTimestamp = (messages) => {
 export const useMessages = () => {
   const [messages, setMessages] = useState([]);
   const [sessions, setSessions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-
-  // Charger la liste des sessions
-  const loadSessions = async () => {
-    try {
-      const response = await fetch(`${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`);
-      if (!response.ok) throw new Error('Erreur chargement sessions');
-      
-      const history = await response.json();
-      
-      // Grouper les messages par session et extraire la première question
-      const sessionMap = history.reduce((acc, msg) => {
-        if (!acc[msg.session_id]) {
-          acc[msg.session_id] = {
-            session_id: msg.session_id,
-            timestamp: msg.timestamp,
-            first_message: msg.query || "Nouvelle conversation",
-            messages: []
-          };
-        }
-        acc[msg.session_id].messages.push(msg);
-        return acc;
-      }, {});
-
-      // Convertir en tableau et trier par date
-      const sessionList = Object.values(sessionMap).sort(
-        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-      );
-
-      setSessions(sessionList);
-    } catch (err) {
-      console.error('Erreur chargement sessions:', err);
-    }
-  };
-
-  // Initialisation
-  useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        await loadSessions();
-        const savedSessionId = localStorage.getItem('chatSessionId');
-        if (savedSessionId) {
-          setSessionId(savedSessionId);
-          await loadSessionHistory(savedSessionId);
-        } else {
-          const newSessionId = generateSessionId();
-          setSessionId(newSessionId);
-          localStorage.setItem('chatSessionId', newSessionId);
-          await createNewSession(newSessionId);
-        }
-      } catch (err) {
-        setError('Erreur lors de l\'initialisation');
-      }
-    };
-
-    initializeSession();
-  }, []);
-
-  // Sélection d'une session
-  const selectSession = async (sid) => {
-    try {
-      setIsLoading(true);
-      setSessionId(sid);
-      localStorage.setItem('chatSessionId', sid);
-      await loadSessionHistory(sid);
-    } catch (err) {
-      console.error('Erreur sélection session:', err);
-      setError('Erreur lors du changement de session');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Formatage de la date en français
   const formatDate = (timestamp) => {
@@ -108,18 +37,80 @@ export const useMessages = () => {
     }).format(new Date(timestamp));
   };
 
-  // Chargement de l'historique
+  // Création d'une nouvelle session
+  const createNewSession = async () => {
+    try {
+      const newSessionId = generateSessionId();
+      const response = await fetch(`${config.API_BASE_URL}/sessions/new?user_id=${config.DEFAULT_USER_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur création session');
+      }
+
+      const data = await response.json();
+      setSessionId(newSessionId);
+      localStorage.setItem('chatSessionId', newSessionId);
+      return newSessionId;
+    } catch (err) {
+      console.error('Erreur création session:', err);
+      throw err;
+    }
+  };
+
+  // Chargement des sessions
+  const loadSessions = async () => {
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`);
+      if (!response.ok) {
+        throw new Error('Erreur chargement sessions');
+      }
+      
+      const history = await response.json();
+      
+      const sessionMap = history.reduce((acc, msg) => {
+        if (!acc[msg.session_id]) {
+          acc[msg.session_id] = {
+            session_id: msg.session_id,
+            timestamp: msg.timestamp,
+            first_message: msg.query || "Nouvelle conversation",
+            messages: []
+          };
+        }
+        acc[msg.session_id].messages.push(msg);
+        return acc;
+      }, {});
+
+      const sessionList = Object.values(sessionMap).sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
+
+      setSessions(sessionList);
+      return sessionList;
+    } catch (err) {
+      console.error('Erreur chargement sessions:', err);
+      throw err;
+    }
+  };
+
+  // Chargement de l'historique d'une session
   const loadSessionHistory = async (sid) => {
     try {
       setIsLoading(true);
       const response = await fetch(`${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`);
       
-      if (!response.ok) throw new Error('Erreur chargement historique');
+      if (!response.ok) {
+        throw new Error('Erreur chargement historique');
+      }
       
       const history = await response.json();
       
       // Transformation des messages pour inclure à la fois les requêtes et les réponses
       const formattedMessages = history.flatMap(msg => {
+        if (msg.session_id !== sid) return [];
+        
         const messages = [];
         const timestamp = new Date(msg.timestamp);
         
@@ -130,7 +121,7 @@ export const useMessages = () => {
             content: msg.query,
             type: 'user',
             timestamp: formatDate(timestamp),
-            originalTimestamp: timestamp // Garder le timestamp original pour le tri
+            originalTimestamp: timestamp
           });
         }
         
@@ -144,19 +135,71 @@ export const useMessages = () => {
             documents_used: msg.documents_used || [],
             confidence_score: msg.confidence_score,
             timestamp: formatDate(timestamp),
-            originalTimestamp: new Date(timestamp.getTime() + 1000) // Ajouter 1 seconde pour garder l'ordre
+            originalTimestamp: new Date(timestamp.getTime() + 1000)
           });
         }
         
         return messages;
       });
 
-      // Tri des messages par ordre chronologique croissant
       const sortedMessages = sortMessagesByTimestamp(formattedMessages);
       setMessages(sortedMessages);
     } catch (err) {
       console.error('Erreur chargement historique:', err);
-      setError('Erreur lors du chargement de l\'historique');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initialisation avec retry
+  const initializeWithRetry = async (retryCount = 3, delay = 1000) => {
+    for (let i = 0; i < retryCount; i++) {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        await loadSessions();
+
+        const savedSessionId = localStorage.getItem('chatSessionId');
+        if (savedSessionId) {
+          setSessionId(savedSessionId);
+          await loadSessionHistory(savedSessionId);
+        } else {
+          await createNewSession();
+        }
+
+        setIsInitialized(true);
+        setError(null);
+        return true;
+
+      } catch (err) {
+        console.error(`Tentative ${i + 1}/${retryCount} échouée:`, err);
+        if (i === retryCount - 1) {
+          setError('Erreur de connexion au serveur. Veuillez réessayer.');
+          throw err;
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    return false;
+  };
+
+  // Sélection d'une session
+  const selectSession = async (sid) => {
+    try {
+      setIsLoading(true);
+      setSessionId(sid);
+      localStorage.setItem('chatSessionId', sid);
+      await loadSessionHistory(sid);
+    } catch (err) {
+      console.error('Erreur sélection session:', err);
+      setError('Erreur lors du changement de session');
     } finally {
       setIsLoading(false);
     }
@@ -210,6 +253,8 @@ export const useMessages = () => {
       };
       setMessages(prev => sortMessagesByTimestamp([...prev, assistantMessage]));
 
+      // Mise à jour de la liste des sessions
+      await loadSessions();
     } catch (err) {
       console.error('Erreur envoi message:', err);
       setError('Erreur lors de l\'envoi du message');
@@ -218,6 +263,14 @@ export const useMessages = () => {
     }
   }, [sessionId, isLoading]);
 
+  // Effet d'initialisation
+  useEffect(() => {
+    initializeWithRetry().catch(err => {
+      console.error('Erreur finale d\'initialisation:', err);
+      setError('Erreur de connexion au serveur. Veuillez réessayer.');
+    });
+  }, []);
+
   return {
     messages,
     sessions,
@@ -225,8 +278,10 @@ export const useMessages = () => {
     error,
     sessionId,
     sendMessage,
-    formatDate,
-    selectSession
+    selectSession,
+    isInitialized,
+    retryInitialization: () => initializeWithRetry(),
+    formatDate
   };
 };
 
