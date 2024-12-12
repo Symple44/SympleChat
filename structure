@@ -1,5 +1,4 @@
 /opt/symple-chat/
-│
 ├── dist/                      # Dossier de build (généré)
 ├── node_modules/             # Dépendances Node.js
 ├── public/                   # Fichiers statiques
@@ -8,50 +7,41 @@
 ├── src/
 │   ├── components/
 │   │   ├── common/          # Composants réutilisables
-│   │   │   ├── Button.jsx
-│   │   │   └── Input.jsx
+│   │   │   ├── Button.jsx   # Boutons standards
+│   │   │   └── Input.jsx    # Champs de saisie standards
 │   │   │
 │   │   └── chat/           # Composants spécifiques au chat
-│   │       ├── ChatContainer.jsx      # Container principal du chat
+│   │       ├── ChatContainer.jsx      # Container principal
 │   │       ├── ChatHeader.jsx         # En-tête avec gestion des sessions
-│   │       ├── MessageList.jsx        # Liste des messages
-│   │       ├── MessageInput.jsx       # Saisie des messages
-│   │       ├── MessageItem.jsx        # Item de message individuel
-│   │       ├── SessionList.jsx        # Liste des sessions disponibles
-│   │       ├── SessionItem.jsx        # Item de session individuel
+│   │       ├── MessageList.jsx        # Liste des messages avec thème
+│   │       ├── MessageInput.jsx       # Zone de saisie des messages
 │   │       ├── DocumentViewer.jsx     # Visualisation des documents
 │   │       └── DocumentPreview.jsx    # Aperçu des documents
 │   │
-│   ├── context/            # Contextes React
-│   │   ├── ChatContext.jsx        # Contexte principal du chat
-│   │   └── ThemeContext.jsx       # Gestion du thème (clair/sombre)
+│   ├── config/             # Configuration
+│   │   └── index.js        # Configuration centralisée (API, WebSocket, etc.)
+│   │
+│   ├── context/           # Contextes React
+│   │   ├── ChatContext.jsx  # Contexte pour le chat
+│   │   └── ThemeContext.jsx # Gestion thème clair/sombre
 │   │
 │   ├── hooks/             # Hooks personnalisés
-│   │   ├── useChat.js            # Hook principal du chat
-│   │   ├── useMessages.js        # Gestion des messages
-│   │   ├── useSessions.js        # Gestion des sessions
-│   │   └── useWebSocket.js       # Connexion WebSocket
+│   │   ├── useChat.js       # Hook principal du chat
+│   │   ├── useMessages.js   # Gestion des messages
+│   │   └── useWebSocket.js  # Connexion WebSocket
 │   │
-│   ├── services/          # Services d'API
-│   │   ├── api.js              # Client API principal
-│   │   ├── sessionService.js   # Service de gestion des sessions
-│   │   └── messageService.js   # Service de gestion des messages
-│   │
-│   ├── utils/             # Utilitaires
-│   │   ├── dateFormatter.js    # Formatage des dates
-│   │   └── messageParser.js    # Parsing des messages
-│   │
-│   ├── pages/            # Pages de l'application
-│   │   ├── Home.jsx           # Page d'accueil
-│   │   └── Chat.jsx          # Page du chat
+│   ├── services/          # Services
+│   │   ├── messages/
+│   │   │   └── messageStore.js  # Store Zustand pour les messages
+│   │   └── api/
+│   │       └── client.js        # Client API unifié
 │   │
 │   ├── styles/           # Styles
-│   │   ├── main.css          # Styles globaux
-│   │   └── themes.css        # Styles des thèmes
+│   │   └── main.css      # Styles globaux et Tailwind
 │   │
-│   ├── config/           # Configuration
-│   │   ├── api.js            # Configuration API
-│   │   └── constants.js      # Constantes globales
+│   ├── utils/            # Utilitaires
+│   │   ├── dateFormatter.js    # Formatage des dates
+│   │   └── messageParser.js    # Parsing des messages
 │   │
 │   ├── App.jsx           # Composant racine
 │   └── main.jsx         # Point d'entrée
@@ -61,9 +51,9 @@
 ├── index.html           # HTML racine
 ├── package.json         # Configuration npm
 ├── postcss.config.js    # Configuration PostCSS
-├── README.md
-├── serve.json          # Configuration du serveur serve
+├── README.md           # Documentation
+├── serve.json          # Configuration du serveur de production
 ├── tailwind.config.js  # Configuration Tailwind
 ├── update.sh          # Script de mise à jour
-├── vercel.json        # Configuration Vercel
+├── vercel.json        # Configuration Vercel (si utilisé)
 └── vite.config.js     # Configuration Vite
