@@ -8,7 +8,8 @@ const WS_BASE = isDev ? 'ws://192.168.0.15:8000' : 'ws://' + window.location.hos
 export const config = {
   APP: {
     NAME: "Eurêka Solutions",
-    TITLE_SUFFIX: "Chat"
+    TITLE_SUFFIX: "Chat",
+    SHOW_DOCUMENT_IMAGES: true
   },
   API: {
     BASE_URL: `${API_BASE}/api`,
