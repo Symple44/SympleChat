@@ -1,5 +1,4 @@
-// src/components/chat/ChatContainer.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -12,14 +11,26 @@ const ChatContainer = () => {
   const { isDark } = useTheme();
   const {
     messages,
+    sessions,
     isLoading,
     error,
     sessionId,
     sendMessage,
-    changeSession
+    changeSession,
+    loadSessions
   } = useMessages();
   
   const { connected } = useWebSocket();
+
+  // Chargement initial des sessions
+  useEffect(() => {
+    console.log('Chargement initial des sessions...');
+    loadSessions().then(() => {
+      console.log('Sessions chargées:', sessions);
+    }).catch(err => {
+      console.error('Erreur chargement sessions:', err);
+    });
+  }, [loadSessions]);
 
   if (error) {
     return (
@@ -43,18 +54,20 @@ const ChatContainer = () => {
       <ChatHeader 
         connected={connected} 
         sessionId={sessionId}
+        sessions={sessions}
         onSelectSession={changeSession}
       />
       <div className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-900">
         <MessageList 
           messages={messages} 
           isLoading={isLoading}
+          currentSessionId={sessionId}
         />
       </div>
       <MessageInput 
         onSend={sendMessage}
         isLoading={isLoading}
-        disabled={!connected}
+        disabled={!connected || !sessionId}
       />
     </div>
   );
