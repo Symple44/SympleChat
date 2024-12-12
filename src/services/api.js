@@ -6,6 +6,7 @@ class ApiClient {
     this.userId = config.DEFAULT_USER_ID;
     this.baseUrl = config.API_BASE_URL;
     this.sessionId = null;
+    console.log('API Client initialized with baseUrl:', this.baseUrl);
   }
 
   // Configuration headers standards
@@ -17,13 +18,18 @@ class ApiClient {
 
   // Méthode helper pour les requêtes
   async request(endpoint, options = {}) {
+    const url = `${this.baseUrl}${endpoint}`;
+    console.log('Making API request to:', url);
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const response = await fetch(url, {
         ...options,
         headers: this.headers
       });
 
       if (!response.ok) {
+        console.error('API Error:', response.status, response.statusText);
+        const text = await response.text();
+        console.error('Response body:', text);
         throw new Error(`API Error: ${response.statusText}`);
       }
 
