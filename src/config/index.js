@@ -1,9 +1,11 @@
-const isDev = import.meta.env.DEV;
+const isDev = import.meta.env ? import.meta.env.DEV : false;
 const HOST = isDev ? 'http://192.168.0.15:8000' : window.location.origin;
 
 export const config = {
   API_BASE_URL: `${HOST}/api`,
-  WS_URL: `${HOST.replace('http', 'ws')}/ws/chat`,
+  WS_URL: isDev 
+    ? 'ws://192.168.0.15:8000/ws/chat'
+    : `ws://${window.location.hostname}:3000/ws/chat`,
   DEFAULT_USER_ID: 'oweo'
 };
 
