@@ -15,8 +15,7 @@
 │   │       ├── ChatHeader.jsx         # En-tête avec gestion des sessions
 │   │       ├── MessageList.jsx        # Liste des messages avec thème
 │   │       ├── MessageInput.jsx       # Zone de saisie des messages
-│   │       ├── DocumentViewer.jsx     # Visualisation des documents
-│   │       └── DocumentPreview.jsx    # Aperçu des documents
+│   │       └── DocumentViewer.jsx     # Visualisation des documents
 │   │
 │   ├── config/             # Configuration
 │   │   └── index.js        # Configuration centralisée (API, WebSocket, etc.)
@@ -55,5 +54,5 @@
 ├── serve.json          # Configuration du serveur de production
 ├── tailwind.config.js  # Configuration Tailwind
 ├── update.sh          # Script de mise à jour
-├── vercel.json        # Configuration Vercel (si utilisé)
+├── vercel.json        # Configuration Vercel
 └── vite.config.js     # Configuration Vite
