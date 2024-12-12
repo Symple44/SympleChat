@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { MessageCircle, Moon, Sun, Book, BookOpen, Plus } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { config } from '../../config';
 
 const ChatHeader = ({ connected, sessionId, onSelectSession, sessions, onNewSession }) => {
   const { isDark, toggleTheme } = useTheme();
@@ -26,7 +27,7 @@ const ChatHeader = ({ connected, sessionId, onSelectSession, sessions, onNewSess
           <div className="flex items-center space-x-2">
             <MessageCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Assistant CM Manager
+              Assistant {config.APP.NAME}
             </h1>
           </div>
         </div>
