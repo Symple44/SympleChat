@@ -58,7 +58,8 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
   try {
     setIsLoading(true);
     console.log('Loading history for session:', sid);
-    const url = `${config.API_BASE_URL}/chat/history/user/${userId}`;
+    // Correction de l'URL pour correspondre à la doc OpenAPI
+    const url = `${config.API_BASE_URL}/history/user/${userId}`;
     console.log('History URL:', url);
     
     const response = await fetch(url);
