@@ -1,14 +1,17 @@
 // src/config/index.js
 const isDev = import.meta.env.MODE === 'development';
-const BACKEND_HOST = '192.168.0.15:8000'; // Toujours pointer vers le backend
+const BACKEND_HOST = '192.168.0.15:8000';
 const FRONTEND_HOST = window.location.host;
 const BACKEND_PROTOCOL = 'http';
 const WS_PROTOCOL = 'ws';
 
 export const config = {
+  APP: {
+    NAME: "Eurêka Solutions",
+    TITLE_SUFFIX: "Chat"  // Pour construire des titres comme "CM Manager Chat"
+  },
   API: {
     BASE_URL: `${BACKEND_PROTOCOL}://${BACKEND_HOST}/api`,
-    // WebSocket pointe toujours vers le backend
     WS_URL: `${WS_PROTOCOL}://${BACKEND_HOST}/ws`,
     ENDPOINTS: {
       CHAT: '/chat',
