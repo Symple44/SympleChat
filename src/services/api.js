@@ -1,9 +1,10 @@
 // src/services/api.js
-const BASE_URL = '/api';
+import { config } from '../config';
 
 class ApiClient {
   constructor() {
-    this.userId = 'oweo'; // User ID par défaut
+    this.userId = config.DEFAULT_USER_ID;
+    this.baseUrl = config.API_BASE_URL;
     this.sessionId = null;
   }
 
@@ -17,7 +18,7 @@ class ApiClient {
   // Méthode helper pour les requêtes
   async request(endpoint, options = {}) {
     try {
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
         headers: this.headers
       });
