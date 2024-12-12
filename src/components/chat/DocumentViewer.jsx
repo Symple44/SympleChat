@@ -42,15 +42,6 @@ const DocumentViewer = ({ document, onClose }) => {
           </div>
         )}
 
-        {/* Informations de contact */}
-        <div className="mb-8 p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
-          <div className="text-sm text-center text-blue-800 dark:text-blue-200">
-            <p>2M-MANAGER – 16 rue Prosper Mérimée 11000 CARCASSONNE</p>
-            <p>Tél : 04.68.77.02.81</p>
-            <p>Organisme déclaré sous le n°73 65 00388 65</p>
-          </div>
-        </div>
-
         {/* Contenu principal */}
         <div className="space-y-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
           {/* Numéro de page */}
