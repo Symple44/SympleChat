@@ -9,7 +9,7 @@ export const config = {
   APP: {
     NAME: "Eurêka Solutions",
     TITLE_SUFFIX: "Chat",
-    SHOW_DOCUMENT_IMAGES: true
+    SHOW_DOCUMENT_IMAGES: false //Afichage des images dans les documents récupérés
   },
   API: {
     BASE_URL: `${API_BASE}/api`,
