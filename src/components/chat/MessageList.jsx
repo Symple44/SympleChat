@@ -1,5 +1,5 @@
 // src/components/chat/MessageList.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import DocumentPreview from './DocumentPreview';
 import DocumentViewer from './DocumentViewer';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,6 +7,15 @@ import { useTheme } from '../../context/ThemeContext';
 const MessageList = ({ messages, error }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const { isDark } = useTheme();
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   return (
     <>
@@ -19,7 +28,7 @@ const MessageList = ({ messages, error }) => {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex mb-4 ${
+            className={`flex mb-6 ${
               msg.type === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
@@ -42,12 +51,13 @@ const MessageList = ({ messages, error }) => {
                   ))}
                 </div>
               )}
-              <span className="text-xs opacity-75 mt-2 block">
+              <span className="text-xs opacity-75 mt-2 block text-right">
                 {msg.timestamp}
               </span>
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       {selectedDocument && (
