@@ -1,66 +1,84 @@
 // src/hooks/useWebSocket.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { config } from '../config';
-
-const WS_URL = 'ws://192.168.0.15:8000/ws';
 
 export const useWebSocket = () => {
   const [connected, setConnected] = useState(false);
-  const [socket, setSocket] = useState(null);
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
 
   const connect = useCallback(() => {
     try {
-      console.log('Tentative de connexion WebSocket à:', config.WS_URL);
-      const ws = new WebSocket(config.WS_URL);
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        return;
+      }
+
+      const ws = new WebSocket(config.API.WS_URL);
 
       ws.onopen = () => {
         console.log('WebSocket connecté');
         setConnected(true);
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
       };
 
       ws.onmessage = (event) => {
-        console.log('Message reçu:', event.data);
+        console.log('Message WebSocket reçu:', event.data);
       };
 
       ws.onclose = () => {
         console.log('WebSocket déconnecté');
         setConnected(false);
-        setTimeout(connect, 3000);
+        wsRef.current = null;
+
+        // Tentative de reconnexion
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Tentative de reconnexion...');
+          connect();
+        }, 3000);
       };
 
       ws.onerror = (error) => {
         console.error('Erreur WebSocket:', error);
       };
 
-      setSocket(ws);
+      wsRef.current = ws;
     } catch (error) {
       console.error('Erreur connexion WebSocket:', error);
+      setConnected(false);
     }
   }, []);
 
   const sendMessage = useCallback((message) => {
-    if (socket?.readyState === WebSocket.OPEN) {
-      const messageData = {
-        type: 'user',
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'message',
         content: message,
         timestamp: new Date().toISOString()
-      };
-      console.log('Envoi message:', messageData);
-      socket.send(JSON.stringify(messageData));
+      }));
       return true;
     }
-    console.warn('WebSocket non connecté');
     return false;
-  }, [socket]);
+  }, []);
 
   useEffect(() => {
     connect();
     return () => {
-      if (socket) {
-        socket.close();
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
       }
     };
   }, [connect]);
 
-  return { connected, sendMessage };
+  return { 
+    connected,
+    sendMessage 
+  };
 };
+
+export default useWebSocket;
