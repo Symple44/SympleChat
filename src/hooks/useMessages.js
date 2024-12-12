@@ -277,16 +277,24 @@ export const useMessages = () => {
       setError(null);
       
       // Créer une nouvelle session
-      const newSessionId = await createNewSession();
-      if (!newSessionId) {
-        throw new Error('Échec de la création de la session');
-      }
+      const newSessionId = generateSessionId();
+      await createNewSession(newSessionId);
 
       // Réinitialiser les messages
       setMessages([]);
-      
-      // Mettre à jour la liste des sessions
-      await loadSessions();
+      setSessionId(newSessionId);
+      localStorage.setItem('chatSessionId', newSessionId);
+
+      // Créer un objet pour la nouvelle session
+      const newSession = {
+        session_id: newSessionId,
+        timestamp: new Date().toISOString(),
+        first_message: "Nouvelle conversation",
+        messages: []
+      };
+
+      // Ajouter la nouvelle session au début de la liste
+      setSessions(prevSessions => [newSession, ...prevSessions]);
       
       return newSessionId;
     } catch (err) {
