@@ -32,7 +32,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
           {messages.map((msg) => (
             <div key={msg.id} className="mb-6">
               {msg.type === 'user' ? (
-                // Message utilisateur (aligné à droite, sans icône)
+                // Message utilisateur (aligné à droite, pas de robot)
                 <div className="flex justify-end">
                   <div className="max-w-[80%]">
                     <div className="bg-blue-600 text-white rounded-2xl px-4 py-3">
@@ -44,36 +44,38 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                   </div>
                 </div>
               ) : (
-                // Message assistant (aligné à gauche)
-                <div className="flex items-start">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                    <Bot size={20} className="text-indigo-600 dark:text-indigo-300" />
-                  </div>
-                  <div className="max-w-[80%] ml-3">
-                    <div className={`rounded-2xl px-4 py-3 ${
-                      isDark 
-                        ? 'bg-gray-800 text-gray-100' 
-                        : 'bg-gray-100 text-gray-900'
-                    }`}>
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                      
-                      {msg.fragments?.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          {msg.fragments.map((doc, index) => (
-                            <DocumentPreview
-                              key={index}
-                              document={doc}
-                              onClick={() => setSelectedDocument(doc)}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-1 flex justify-between items-center text-xs opacity-75">
-                        <span>{formatDate(msg.timestamp)}</span>
-                        {msg.confidence && (
-                          <span>Confiance: {(msg.confidence * 100).toFixed(0)}%</span>
+                // Message assistant (aligné à gauche, avec robot)
+                <div className="flex items-start pl-8">
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
+                      <Bot size={20} className="text-indigo-600 dark:text-indigo-300" />
+                    </div>
+                    <div className="max-w-[80%] ml-3">
+                      <div className={`rounded-2xl px-4 py-3 ${
+                        isDark 
+                          ? 'bg-gray-800 text-gray-100' 
+                          : 'bg-gray-100 text-gray-900'
+                      }`}>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                        
+                        {msg.fragments?.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            {msg.fragments.map((doc, index) => (
+                              <DocumentPreview
+                                key={index}
+                                document={doc}
+                                onClick={() => setSelectedDocument(doc)}
+                              />
+                            ))}
+                          </div>
                         )}
+
+                        <div className="mt-1 flex justify-between items-center text-xs opacity-75">
+                          <span>{formatDate(msg.timestamp)}</span>
+                          {msg.confidence && (
+                            <span>Confiance: {(msg.confidence * 100).toFixed(0)}%</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
