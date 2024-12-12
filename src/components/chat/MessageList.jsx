@@ -1,10 +1,12 @@
 // src/components/chat/MessageList.jsx
 import React, { useState, useRef, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import DocumentPreview from './DocumentPreview';
 import DocumentViewer from './DocumentViewer';
 import { useTheme } from '../../context/ThemeContext';
+import { config } from '../../config';
 
-const MessageList = ({ messages, error }) => {
+const MessageList = ({ messages, isLoading }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const { isDark } = useTheme();
   const messagesEndRef = useRef(null);
@@ -17,14 +19,14 @@ const MessageList = ({ messages, error }) => {
     scrollToBottom();
   }, [messages]);
 
+  const formatDate = (timestamp) => {
+    return new Intl.DateTimeFormat('fr-FR', config.CHAT.DATE_FORMAT_OPTIONS)
+      .format(new Date(timestamp));
+  };
+
   return (
     <>
       <div className="h-full overflow-y-auto px-4 py-6">
-        {error && (
-          <div className="bg-red-100 dark:bg-red-900 border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded relative my-4">
-            {error}
-          </div>
-        )}
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -36,12 +38,13 @@ const MessageList = ({ messages, error }) => {
               className={`max-w-[80%] rounded-lg p-4 ${
                 msg.type === 'user'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
               }`}
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
-              {msg.type === 'assistant' && msg.fragments && msg.fragments.length > 0 && (
-                <div className="mt-4">
+              
+              {msg.type === 'assistant' && msg.fragments?.length > 0 && (
+                <div className="mt-4 space-y-2">
                   {msg.fragments.map((doc, index) => (
                     <DocumentPreview
                       key={index}
@@ -51,12 +54,25 @@ const MessageList = ({ messages, error }) => {
                   ))}
                 </div>
               )}
-              <span className="text-xs opacity-75 mt-2 block text-right">
-                {msg.timestamp}
-              </span>
+
+              <div className="mt-2 flex justify-between items-center text-xs opacity-75">
+                <span>{formatDate(msg.timestamp)}</span>
+                {msg.type === 'assistant' && msg.confidence && (
+                  <span className="ml-2">
+                    Confiance: {(msg.confidence * 100).toFixed(0)}%
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ))}
+
+        {isLoading && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
