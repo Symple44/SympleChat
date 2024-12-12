@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, User } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import DocumentPreview from './DocumentPreview';
 import DocumentViewer from './DocumentViewer';
 import { useTheme } from '../../context/ThemeContext';
@@ -32,8 +32,8 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
         {messages.map((msg) => (
           <div key={msg.id} className="mb-6">
             {msg.type === 'user' ? (
-              // Message utilisateur
-              <div className="flex justify-end items-start gap-3">
+              // Message utilisateur (sans icône)
+              <div className="flex justify-end">
                 <div className="max-w-[80%]">
                   <div className="bg-blue-600 text-white rounded-lg p-4">
                     <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -42,18 +42,19 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                     </span>
                   </div>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <User size={20} className="text-blue-600" />
-                </div>
               </div>
             ) : (
-              // Message assistant (réponse)
+              // Message assistant (avec icône robot)
               <div className="flex items-start gap-3 pl-8">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <Bot size={20} className="text-indigo-600" />
+                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+                  <Bot size={20} className="text-indigo-600 dark:text-indigo-200" />
                 </div>
                 <div className="max-w-[80%]">
-                  <div className="bg-gray-50 dark:bg-gray-700 shadow-sm rounded-lg p-4">
+                  <div className={`rounded-lg p-4 ${
+                    isDark 
+                      ? 'bg-gray-800 text-gray-100' 
+                      : 'bg-gray-50 text-gray-900'
+                  }`}>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                     
                     {msg.fragments?.length > 0 && (
@@ -68,7 +69,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                       </div>
                     )}
 
-                    <div className="mt-2 flex justify-between items-center text-xs text-gray-500">
+                    <div className="mt-2 flex justify-between items-center text-xs opacity-75">
                       <span>{formatDate(msg.timestamp)}</span>
                       {msg.confidence && (
                         <span>Confiance: {(msg.confidence * 100).toFixed(0)}%</span>
@@ -89,12 +90,9 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
         
         <div ref={messagesEndRef} />
 
-        {/* Panneau de débogage */}
-        <div className="fixed bottom-20 left-0 right-0 bg-gray-100 dark:bg-gray-800 p-2 text-xs font-mono border-t dark:border-gray-700">
-          <div className="container mx-auto flex justify-between">
-            <span>Utilisateur: {config.CHAT.DEFAULT_USER_ID}</span>
-            <span>Session: {currentSessionId || 'Aucune session'}</span>
-          </div>
+        {/* Bandeau d'information simplifié */}
+        <div className="fixed bottom-16 right-4 bg-white dark:bg-gray-800 px-3 py-1 rounded-md shadow-sm text-xs font-mono text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+          Session: {currentSessionId || 'Aucune'}
         </div>
       </div>
 
