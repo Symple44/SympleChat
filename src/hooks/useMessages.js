@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { config } from '../config'; 
 
-const API_BASE_URL = '/api';
-const DEFAULT_USER_ID = 'oweo';
-
-export const useMessages = (userId = DEFAULT_USER_ID) => {
+export const useMessages = (userId = config.DEFAULT_USER_ID) => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
