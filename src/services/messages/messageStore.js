@@ -138,31 +138,20 @@ const useMessageStore = create(
 
         try {
           // Message utilisateur
-          const userMessage = {
-            id: Date.now(),
+          const userMessage = formatMessage({
             content,
-            type: 'user',
-            timestamp: new Date().toISOString()
-          };
+            type: 'user'  // Spécification explicite du type
+          });
           get().addMessage(userMessage);
 
           // Envoi et réponse
           const response = await apiClient.sendMessage(content, currentSessionId);
           
-          const assistantMessage = {
-            id: Date.now() + 1,
-            content: response.response,
-            type: 'assistant',
-            documents: response.documents_used,
-            fragments: response.fragments,
-            confidence: response.confidence_score,
-            timestamp: new Date().toISOString()
-          };
+          const assistantMessage = formatMessage(response);
           get().addMessage(assistantMessage);
 
           // Mise à jour de la session
           await get().loadSessions();
-
           return response;
         } catch (error) {
           set({ error: error.message });
@@ -199,14 +188,28 @@ const useMessageStore = create(
   )
 );
 
-const formatMessage = (message) => ({
-  id: message.id || Date.now(),
-  content: message.query || message.response || message.content,
-  type: message.query ? 'user' : 'assistant',
-  timestamp: new Date(message.timestamp).toISOString(),
-  documents: message.documents_used || [],
-  fragments: message.fragments || [],
-  confidence: message.confidence_score
-});
+const formatMessage = (message) => {
+  // Si c'est un nouveau message utilisateur (avec content direct)
+  if (message.type === 'user') {
+    return {
+      id: Date.now(),
+      content: message.content,
+      type: 'user',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Si c'est une réponse de l'API
+  if (message.response) {
+    return {
+      id: Date.now(),
+      content: message.response,
+      type: 'assistant',
+      timestamp: new Date(message.timestamp).toISOString(),
+      documents: message.documents_used || [],
+      fragments: message.fragments || [],
+      confidence: message.confidence_score
+    };
+  }
 
 export default useMessageStore;
