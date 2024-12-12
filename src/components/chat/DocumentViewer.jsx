@@ -42,24 +42,8 @@ const DocumentViewer = ({ document, onClose }) => {
           </div>
         )}
 
-        {/* Contenu principal */}
         <div className="space-y-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-          {/* Numéro de page */}
-          <div className="text-right mb-4">
-            <p className="text-sm text-blue-700 dark:text-blue-300">Page {document.page}</p>
-          </div>
-
-          {/* Contexte précédent */}
-          {document.context_before && (
-            <div className="text-blue-700 dark:text-blue-300 pb-4 border-b border-blue-100 dark:border-gray-700">
-              {document.context_before.split('\n').map((line, i) => (
-                line.trim() && <p key={i} className="mb-2">{line}</p>
-              ))}
-            </div>
-          )}
-
-          {/* Texte principal */}
-          <div className="text-blue-900 dark:text-blue-50 py-4">
+          <div className="text-blue-900 dark:text-blue-50">
             {document.text.split('\n').map((line, i) => (
               line.trim() && (
                 <p 
@@ -71,15 +55,6 @@ const DocumentViewer = ({ document, onClose }) => {
               )
             ))}
           </div>
-
-          {/* Contexte suivant */}
-          {document.context_after && (
-            <div className="text-blue-700 dark:text-blue-300 pt-4 border-t border-blue-100 dark:border-gray-700">
-              {document.context_after.split('\n').map((line, i) => (
-                line.trim() && <p key={i} className="mb-2">{line}</p>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>
