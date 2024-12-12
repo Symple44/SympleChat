@@ -1,13 +1,35 @@
-const isDev = import.meta.env ? import.meta.env.DEV : false;
-const BACKEND_HOST = '192.168.0.15:8000';
-const HOST = isDev ? `http://${BACKEND_HOST}` : window.location.origin;
+// src/config/index.js
+const isDev = import.meta.env.MODE === 'development';
+const BACKEND_HOST = isDev ? '192.168.0.15:8000' : window.location.host;
+const BACKEND_PROTOCOL = isDev ? 'http' : window.location.protocol;
+const WS_PROTOCOL = isDev ? 'ws' : (window.location.protocol === 'https:' ? 'wss' : 'ws');
 
 export const config = {
-  API_BASE_URL: `http://${BACKEND_HOST}/api`,
-  WS_URL: `ws://${BACKEND_HOST}/ws`,  // Retiré le /chat pour test
-  DEFAULT_USER_ID: 'oweo'
+  API: {
+    BASE_URL: `${BACKEND_PROTOCOL}//${BACKEND_HOST}/api`,
+    WS_URL: `${WS_PROTOCOL}://${BACKEND_HOST}/ws`,
+    ENDPOINTS: {
+      CHAT: '/chat',
+      SESSIONS: '/sessions',
+      HISTORY: '/history',
+      HEALTH: '/health'
+    },
+    HEADERS: {
+      'Content-Type': 'application/json'
+    }
+  },
+  CHAT: {
+    DEFAULT_USER_ID: 'oweo',
+    MAX_MESSAGE_LENGTH: 1000,
+    DEFAULT_LANGUAGE: 'fr',
+    DATE_FORMAT_OPTIONS: {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+  }
 };
-
-console.log('Config loaded:', config);
 
 export default config;
