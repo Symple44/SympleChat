@@ -27,15 +27,15 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
 
   return (
     <>
-      <div className={`h-full overflow-y-auto px-4 py-6 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+      <div className={`h-full overflow-y-auto px-4 py-4`}>
         <div className="w-full">
           {messages.map((msg) => (
-            <div key={msg.id} className="mb-6">
+            <div key={msg.id} className="mb-3">
               {msg.type === 'user' ? (
-                // Message utilisateur (aligné à gauche, pas de robot)
+                // Message utilisateur
                 <div className="flex justify-start">
                   <div className="max-w-[80%]">
-                    <div className="bg-blue-600 text-white rounded-none px-4 py-3">
+                    <div className="bg-blue-600 text-white rounded-xl px-4 py-2">
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                       <span className="text-xs opacity-75 block text-right mt-1">
                         {formatDate(msg.timestamp)}
@@ -44,14 +44,14 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                   </div>
                 </div>
               ) : (
-                // Message assistant (aligné à gauche, avec robot)
+                // Message assistant
                 <div className="flex items-start pl-8">
                   <div className="flex items-start">
-                    <div className="w-8 h-8 rounded-none bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <Bot size={20} className="text-indigo-600 dark:text-indigo-300" />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-indigo-500 to-blue-600">
+                      <Bot size={16} className="text-white" />
                     </div>
                     <div className="max-w-[80%] ml-3">
-                      <div className={`rounded-none px-4 py-3 ${
+                      <div className={`rounded-xl px-4 py-2 ${
                         isDark 
                           ? 'bg-gray-800 text-gray-100' 
                           : 'bg-gray-100 text-gray-900'
@@ -59,7 +59,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                         
                         {msg.fragments?.length > 0 && (
-                          <div className="mt-4 space-y-2">
+                          <div className="mt-3 space-y-2">
                             {msg.fragments.map((doc, index) => (
                               <DocumentPreview
                                 key={index}
@@ -85,8 +85,8 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
           ))}
 
           {isLoading && (
-            <div className="flex justify-center py-4">
-              <div className="animate-spin rounded-none h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+            <div className="flex justify-center py-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
             </div>
           )}
           
@@ -95,7 +95,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
 
         {/* Bandeau d'information en bas */}
         <div className="fixed bottom-16 right-4">
-          <div className={`px-3 py-1 rounded-none text-xs font-mono shadow-sm ${
+          <div className={`px-3 py-1 rounded-lg text-xs font-mono shadow-sm ${
             isDark 
               ? 'bg-gray-800 text-gray-300 border border-gray-700' 
               : 'bg-white text-gray-600 border border-gray-200'
