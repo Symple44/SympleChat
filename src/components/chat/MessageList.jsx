@@ -3,6 +3,7 @@ import { Bot } from 'lucide-react';
 import DocumentPreview from './DocumentPreview';
 import DocumentViewer from './DocumentViewer';
 import { useTheme } from '../../context/ThemeContext';
+import { config } from '../../config';
 
 const MessageList = ({ messages, isLoading, currentSessionId }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -100,7 +101,9 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
               ? 'bg-gray-800 text-gray-300 border border-gray-700' 
               : 'bg-white text-gray-600 border border-gray-200'
           }`}>
-            Session: {currentSessionId || 'Aucune'}
+            <span className="opacity-75">{config.CHAT.DEFAULT_USER_ID}</span>
+            <span className="mx-2 opacity-50">|</span>
+            <span>Session: {currentSessionId || 'Aucune'}</span>
           </div>
         </div>
       </div>
