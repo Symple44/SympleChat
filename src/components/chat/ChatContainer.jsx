@@ -18,11 +18,15 @@ const ChatContainer = () => {
     sendMessage,
     sessionId,
     selectSession,
-    retryInitialization
+    retryInitialization,
+    startNewSession
   } = useMessages();
   const { connected } = useWebSocket();
 
-  // Affichage de l'erreur avec bouton de retry
+  const handleNewSession = async () => {
+    await startNewSession();
+  };
+
   const renderError = () => {
     if (!error) return null;
 
@@ -49,6 +53,7 @@ const ChatContainer = () => {
         sessionId={sessionId}
         sessions={sessions}
         onSelectSession={selectSession}
+        onNewSession={handleNewSession}
       />
       <div className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-900">
         {renderError()}
