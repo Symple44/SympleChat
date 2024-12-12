@@ -2,6 +2,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { config } from '../config';
 
+const generateSessionId = () => {
+  // Création d'un ID unique basé sur l'appareil et l'heure
+  const deviceInfo = window.navigator.userAgent;
+  const timestamp = Date.now();
+  const randomStr = Math.random().toString(36).substring(7);
+  return btoa(`${deviceInfo}-${timestamp}-${randomStr}`).substring(0, 32);
+};
+
 export const useMessages = () => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -12,17 +20,22 @@ export const useMessages = () => {
   useEffect(() => {
     const initializeSession = async () => {
       try {
+        // Récupération ou génération du sessionId
         const savedSessionId = localStorage.getItem('chatSessionId');
+        const currentDeviceId = generateSessionId();
         
-        if (savedSessionId) {
+        if (savedSessionId && savedSessionId.startsWith(currentDeviceId.substring(0, 10))) {
           setSessionId(savedSessionId);
           await loadSessionHistory(savedSessionId);
         } else {
-          await createNewSession();
+          const newSessionId = currentDeviceId;
+          setSessionId(newSessionId);
+          localStorage.setItem('chatSessionId', newSessionId);
+          await createNewSession(newSessionId);
         }
       } catch (err) {
+        console.error('Erreur initialisation session:', err);
         setError('Erreur lors de l\'initialisation de la session');
-        console.error('Erreur session:', err);
       }
     };
 
@@ -30,7 +43,7 @@ export const useMessages = () => {
   }, []);
 
   // Création d'une nouvelle session
-  const createNewSession = async () => {
+  const createNewSession = async (sid) => {
     try {
       const response = await fetch(`${config.API_BASE_URL}/sessions/new?user_id=${config.DEFAULT_USER_ID}`, {
         method: 'POST',
@@ -38,51 +51,69 @@ export const useMessages = () => {
       });
 
       if (!response.ok) throw new Error('Erreur création session');
-      
-      const data = await response.json();
-      setSessionId(data.session_id);
-      localStorage.setItem('chatSessionId', data.session_id);
-      
-      return data.session_id;
+      return await response.json();
     } catch (err) {
-      setError('Erreur lors de la création de la session');
       console.error('Erreur création session:', err);
+      setError('Erreur lors de la création de la session');
       return null;
     }
+  };
+
+  // Formatage de la date en français
+  const formatDate = (timestamp) => {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(new Date(timestamp));
   };
 
   // Chargement de l'historique
   const loadSessionHistory = async (sid) => {
     try {
       setIsLoading(true);
-      console.log('Loading history for session:', sid);
-      const url = `${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`;
-      console.log('History URL:', url);
+      const response = await fetch(`${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`);
       
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const text = await response.text();
-        console.error('History error response:', text);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error('Erreur chargement historique');
       
       const history = await response.json();
-      console.log('History loaded:', history);
       
-      const formattedMessages = history.map(msg => ({
-        id: msg.id || Date.now(),
-        content: msg.query || msg.response,
-        type: msg.query ? 'user' : 'assistant',
-        fragments: msg.fragments || [],
-        documents_used: msg.documents_used || [],
-        timestamp: new Date(msg.timestamp).toLocaleTimeString(),
-        confidence_score: msg.confidence_score
-      }));
+      // Transformation des messages pour inclure à la fois les requêtes et les réponses
+      const formattedMessages = history.flatMap(msg => {
+        const messages = [];
+        
+        // Message de l'utilisateur
+        if (msg.query) {
+          messages.push({
+            id: `${msg.id}-query`,
+            content: msg.query,
+            type: 'user',
+            timestamp: formatDate(msg.timestamp)
+          });
+        }
+        
+        // Réponse de l'assistant
+        if (msg.response) {
+          messages.push({
+            id: `${msg.id}-response`,
+            content: msg.response,
+            type: 'assistant',
+            fragments: msg.fragments || [],
+            documents_used: msg.documents_used || [],
+            confidence_score: msg.confidence_score,
+            timestamp: formatDate(msg.timestamp)
+          });
+        }
+        
+        return messages;
+      });
 
       setMessages(formattedMessages);
     } catch (err) {
-      console.error('Detailed error loading history:', err);
+      console.error('Erreur chargement historique:', err);
       setError('Erreur lors du chargement de l\'historique');
     } finally {
       setIsLoading(false);
@@ -96,12 +127,12 @@ export const useMessages = () => {
     try {
       setIsLoading(true);
       
-      // Ajout du message utilisateur à l'interface
+      // Ajout du message utilisateur
       const userMessage = {
         id: Date.now(),
         content,
         type: 'user',
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: formatDate(new Date())
       };
       setMessages(prev => [...prev, userMessage]);
 
@@ -117,16 +148,11 @@ export const useMessages = () => {
         })
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Erreur API:', errorText);
-        throw new Error('Erreur communication serveur');
-      }
+      if (!response.ok) throw new Error('Erreur communication serveur');
       
       const data = await response.json();
-      console.log('Réponse du serveur:', data);
-
-      // Ajout de la réponse à l'interface
+      
+      // Ajout de la réponse de l'assistant
       const assistantMessage = {
         id: Date.now() + 1,
         content: data.response,
@@ -134,7 +160,7 @@ export const useMessages = () => {
         fragments: data.fragments || [],
         documents_used: data.documents_used || [],
         confidence_score: data.confidence_score,
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: formatDate(new Date())
       };
       setMessages(prev => [...prev, assistantMessage]);
 
@@ -146,23 +172,13 @@ export const useMessages = () => {
     }
   }, [sessionId, isLoading]);
 
-  // Démarrage d'une nouvelle session
-  const startNewSession = useCallback(async () => {
-    localStorage.removeItem('chatSessionId');
-    setMessages([]);
-    const newSessionId = await createNewSession();
-    if (newSessionId) {
-      setSessionId(newSessionId);
-    }
-  }, []);
-
   return {
     messages,
     isLoading,
     error,
     sessionId,
     sendMessage,
-    startNewSession
+    formatDate
   };
 };
 
