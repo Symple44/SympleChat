@@ -32,7 +32,9 @@ const apiClient = {
   },
 
   async getUserSessions() {
-    const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.HISTORY}/user/${config.CHAT.DEFAULT_USER_ID}`);
+    const response = await fetch(
+      `${config.API.BASE_URL}${config.API.ENDPOINTS.HISTORY}/user/${config.CHAT.DEFAULT_USER_ID}`
+    );
     if (!response.ok) {
       throw new Error('Erreur lors du chargement des sessions');
     }
@@ -40,15 +42,54 @@ const apiClient = {
   },
 
   async createNewSession() {
-    const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.SESSIONS}/new?user_id=${config.CHAT.DEFAULT_USER_ID}`, {
-      method: 'POST',
-      headers: config.API.HEADERS
-    });
+    const response = await fetch(
+      `${config.API.BASE_URL}${config.API.ENDPOINTS.SESSIONS}/new?user_id=${config.CHAT.DEFAULT_USER_ID}`,
+      {
+        method: 'POST',
+        headers: config.API.HEADERS
+      }
+    );
     if (!response.ok) {
       throw new Error('Erreur lors de la création de la session');
     }
     return response.json();
   }
+};
+
+const formatMessage = (message) => {
+  // Pour un nouveau message utilisateur
+  if (message.type === 'user') {
+    return {
+      id: Date.now(),
+      content: message.content,
+      type: 'user',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Pour une réponse de l'assistant via l'API
+  if (message.response) {
+    return {
+      id: Date.now(),
+      content: message.response,
+      type: 'assistant',
+      timestamp: new Date(message.timestamp || Date.now()).toISOString(),
+      documents: message.documents_used || [],
+      fragments: message.fragments || [],
+      confidence: message.confidence_score
+    };
+  }
+
+  // Pour un message de l'historique
+  return {
+    id: message.id || Date.now(),
+    content: message.query || message.response || message.content,
+    type: message.query ? 'user' : 'assistant',
+    timestamp: new Date(message.timestamp || Date.now()).toISOString(),
+    documents: message.documents_used || [],
+    fragments: message.fragments || [],
+    confidence: message.confidence_score
+  };
 };
 
 const useMessageStore = create(
@@ -60,7 +101,7 @@ const useMessageStore = create(
       error: null,
       currentSessionId: null,
 
-      // Actions
+      // Actions de base
       setMessages: (messages) => set({ messages }),
       setSessions: (sessions) => set({ sessions }),
       
@@ -74,7 +115,7 @@ const useMessageStore = create(
       setLoading: (isLoading) => set({ isLoading }),
       setCurrentSession: (sessionId) => set({ currentSessionId: sessionId }),
 
-      // Sessions
+      // Gestion des sessions
       loadSessions: async () => {
         set({ isLoading: true, error: null });
         try {
@@ -87,7 +128,8 @@ const useMessageStore = create(
               };
             }
             groups[msg.session_id].messages.push(msg);
-            if (!groups[msg.session_id].timestamp || new Date(msg.timestamp) > new Date(groups[msg.session_id].timestamp)) {
+            if (!groups[msg.session_id].timestamp || 
+                new Date(msg.timestamp) > new Date(groups[msg.session_id].timestamp)) {
               groups[msg.session_id].timestamp = msg.timestamp;
             }
             return groups;
@@ -102,6 +144,7 @@ const useMessageStore = create(
           sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
           set({ sessions });
         } catch (error) {
+          console.error('Erreur chargement sessions:', error);
           set({ error: error.message });
         } finally {
           set({ isLoading: false });
@@ -124,6 +167,7 @@ const useMessageStore = create(
           }));
           return response.session_id;
         } catch (error) {
+          console.error('Erreur création session:', error);
           set({ error: error.message });
           throw error;
         } finally {
@@ -131,29 +175,39 @@ const useMessageStore = create(
         }
       },
 
-      // Messages
+      // Gestion des messages
       sendMessage: async (content) => {
         const { currentSessionId } = get();
         set({ isLoading: true, error: null });
 
         try {
-          // Message utilisateur
-          const userMessage = formatMessage({
+          // Ajout du message utilisateur
+          const userMessage = {
             content,
-            type: 'user'  // Spécification explicite du type
-          });
+            type: 'user'
+          };
           get().addMessage(userMessage);
 
-          // Envoi et réponse
+          // Envoi et réception de la réponse
           const response = await apiClient.sendMessage(content, currentSessionId);
           
-          const assistantMessage = formatMessage(response);
+          // Ajout de la réponse de l'assistant
+          const assistantMessage = {
+            content: response.response,
+            type: 'assistant',
+            documents: response.documents_used,
+            fragments: response.fragments,
+            confidence: response.confidence_score,
+            timestamp: new Date().toISOString()
+          };
           get().addMessage(assistantMessage);
 
-          // Mise à jour de la session
+          // Mise à jour des sessions
           await get().loadSessions();
+
           return response;
         } catch (error) {
+          console.error('Erreur envoi message:', error);
           set({ error: error.message });
           throw error;
         } finally {
@@ -170,6 +224,7 @@ const useMessageStore = create(
             currentSessionId: sessionId 
           });
         } catch (error) {
+          console.error('Erreur chargement messages:', error);
           set({ error: error.message });
           throw error;
         } finally {
@@ -187,29 +242,5 @@ const useMessageStore = create(
     }
   )
 );
-
-const formatMessage = (message) => {
-  // Si c'est un nouveau message utilisateur (avec content direct)
-  if (message.type === 'user') {
-    return {
-      id: Date.now(),
-      content: message.content,
-      type: 'user',
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // Si c'est une réponse de l'API
-  if (message.response) {
-    return {
-      id: Date.now(),
-      content: message.response,
-      type: 'assistant',
-      timestamp: new Date(message.timestamp).toISOString(),
-      documents: message.documents_used || [],
-      fragments: message.fragments || [],
-      confidence: message.confidence_score
-    };
-  }
 
 export default useMessageStore;
