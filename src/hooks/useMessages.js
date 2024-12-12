@@ -10,6 +10,14 @@ const generateSessionId = () => {
   return btoa(`${deviceInfo}-${timestamp}-${randomStr}`).substring(0, 32);
 };
 
+const sortMessagesByTimestamp = (messages) => {
+  return [...messages].sort((a, b) => {
+    const timestampA = new Date(a.originalTimestamp).getTime();
+    const timestampB = new Date(b.originalTimestamp).getTime();
+    return timestampA - timestampB;
+  });
+};
+
 export const useMessages = () => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,6 +92,7 @@ export const useMessages = () => {
       // Transformation des messages pour inclure à la fois les requêtes et les réponses
       const formattedMessages = history.flatMap(msg => {
         const messages = [];
+        const timestamp = new Date(msg.timestamp);
         
         // Message de l'utilisateur
         if (msg.query) {
@@ -91,7 +100,8 @@ export const useMessages = () => {
             id: `${msg.id}-query`,
             content: msg.query,
             type: 'user',
-            timestamp: formatDate(msg.timestamp)
+            timestamp: formatDate(timestamp),
+            originalTimestamp: timestamp // Garder le timestamp original pour le tri
           });
         }
         
@@ -104,14 +114,17 @@ export const useMessages = () => {
             fragments: msg.fragments || [],
             documents_used: msg.documents_used || [],
             confidence_score: msg.confidence_score,
-            timestamp: formatDate(msg.timestamp)
+            timestamp: formatDate(timestamp),
+            originalTimestamp: new Date(timestamp.getTime() + 1000) // Ajouter 1 seconde pour garder l'ordre
           });
         }
         
         return messages;
       });
 
-      setMessages(formattedMessages);
+      // Tri des messages par ordre chronologique croissant
+      const sortedMessages = sortMessagesByTimestamp(formattedMessages);
+      setMessages(sortedMessages);
     } catch (err) {
       console.error('Erreur chargement historique:', err);
       setError('Erreur lors du chargement de l\'historique');
@@ -126,15 +139,17 @@ export const useMessages = () => {
 
     try {
       setIsLoading(true);
+      const currentTime = new Date();
       
       // Ajout du message utilisateur
       const userMessage = {
         id: Date.now(),
         content,
         type: 'user',
-        timestamp: formatDate(new Date())
+        timestamp: formatDate(currentTime),
+        originalTimestamp: currentTime
       };
-      setMessages(prev => [...prev, userMessage]);
+      setMessages(prev => sortMessagesByTimestamp([...prev, userMessage]));
 
       // Envoi au backend
       const response = await fetch(`${config.API_BASE_URL}/chat`, {
@@ -151,6 +166,7 @@ export const useMessages = () => {
       if (!response.ok) throw new Error('Erreur communication serveur');
       
       const data = await response.json();
+      const responseTime = new Date();
       
       // Ajout de la réponse de l'assistant
       const assistantMessage = {
@@ -160,9 +176,10 @@ export const useMessages = () => {
         fragments: data.fragments || [],
         documents_used: data.documents_used || [],
         confidence_score: data.confidence_score,
-        timestamp: formatDate(new Date())
+        timestamp: formatDate(responseTime),
+        originalTimestamp: responseTime
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => sortMessagesByTimestamp([...prev, assistantMessage]));
 
     } catch (err) {
       console.error('Erreur envoi message:', err);
