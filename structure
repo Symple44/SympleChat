@@ -3,6 +3,7 @@
 ├── dist/                      # Dossier de build (généré)
 ├── node_modules/             # Dépendances Node.js
 ├── public/                   # Fichiers statiques
+│   └── vite.svg
 │
 ├── src/
 │   ├── components/
@@ -11,42 +12,46 @@
 │   │   │   └── Input.jsx
 │   │   │
 │   │   └── chat/           # Composants spécifiques au chat
-│   │       ├── ChatApp.jsx
-│   │       ├── ChatContainer.jsx
-│   │       ├── ChatHeader.jsx
-│   │       ├── DocumentPreview.jsx
-│   │       ├── DocumentViewer.jsx
-│   │       ├── InstructionViewer.jsx
-│   │       ├── MessageInput.jsx
-│   │       ├── MessageItem.jsx
-│   │       └── MessageList.jsx
+│   │       ├── ChatContainer.jsx      # Container principal du chat
+│   │       ├── ChatHeader.jsx         # En-tête avec gestion des sessions
+│   │       ├── MessageList.jsx        # Liste des messages
+│   │       ├── MessageInput.jsx       # Saisie des messages
+│   │       ├── MessageItem.jsx        # Item de message individuel
+│   │       ├── SessionList.jsx        # Liste des sessions disponibles
+│   │       ├── SessionItem.jsx        # Item de session individuel
+│   │       ├── DocumentViewer.jsx     # Visualisation des documents
+│   │       └── DocumentPreview.jsx    # Aperçu des documents
 │   │
 │   ├── context/            # Contextes React
-│   │   ├── ChatContext.jsx
-│   │   └── ThemeContext.jsx
+│   │   ├── ChatContext.jsx        # Contexte principal du chat
+│   │   └── ThemeContext.jsx       # Gestion du thème (clair/sombre)
 │   │
 │   ├── hooks/             # Hooks personnalisés
-│   │   ├── useChat.js
-│   │   ├── useMessages.js
-│   │   ├── useSession.js
-│   │   └── useWebSocket.js
+│   │   ├── useChat.js            # Hook principal du chat
+│   │   ├── useMessages.js        # Gestion des messages
+│   │   ├── useSessions.js        # Gestion des sessions
+│   │   └── useWebSocket.js       # Connexion WebSocket
 │   │
 │   ├── services/          # Services d'API
-│   │   ├── api.js
-│   │   └── chatService.js
+│   │   ├── api.js              # Client API principal
+│   │   ├── sessionService.js   # Service de gestion des sessions
+│   │   └── messageService.js   # Service de gestion des messages
 │   │
 │   ├── utils/             # Utilitaires
-│   │   ├── dateFormatter.js
-│   │   └── messageParser.js
+│   │   ├── dateFormatter.js    # Formatage des dates
+│   │   └── messageParser.js    # Parsing des messages
 │   │
 │   ├── pages/            # Pages de l'application
-│   │   └── Home.jsx
+│   │   ├── Home.jsx           # Page d'accueil
+│   │   └── Chat.jsx          # Page du chat
 │   │
 │   ├── styles/           # Styles
-│   │   └── main.css
+│   │   ├── main.css          # Styles globaux
+│   │   └── themes.css        # Styles des thèmes
 │   │
 │   ├── config/           # Configuration
-│   │   └── index.js
+│   │   ├── api.js            # Configuration API
+│   │   └── constants.js      # Constantes globales
 │   │
 │   ├── App.jsx           # Composant racine
 │   └── main.jsx         # Point d'entrée
