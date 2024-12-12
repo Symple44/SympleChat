@@ -28,7 +28,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
   return (
     <>
       <div className="h-full overflow-y-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto">
+        <div className="w-full">
           {messages.map((msg) => (
             <div key={msg.id} className="mb-6">
               {msg.type === 'user' ? (
@@ -44,7 +44,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                   </div>
                 </div>
               ) : (
-                // Message assistant (aligné à gauche, avec icône)
+                // Message assistant (aligné à gauche)
                 <div className="flex items-start">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
                     <Bot size={20} className="text-indigo-600 dark:text-indigo-300" />
