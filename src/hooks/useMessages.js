@@ -62,26 +62,38 @@ export const useMessages = () => {
 
   // Chargement des sessions
   const loadSessions = async () => {
-    try {
-      const response = await fetch(`${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`);
-      if (!response.ok) {
-        throw new Error('Erreur chargement sessions');
+  try {
+    const response = await fetch(`${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`);
+    if (!response.ok) {
+      throw new Error('Erreur chargement sessions');
+    }
+    
+    const history = await response.json();
+    
+    const sessionMap = history.reduce((acc, msg) => {
+      if (!acc[msg.session_id]) {
+        acc[msg.session_id] = {
+          session_id: msg.session_id,
+          timestamp: msg.timestamp,
+          first_message: msg.query || "Nouvelle conversation",
+          messages: []
+        };
       }
-      
-      const history = await response.json();
-      
-      const sessionMap = history.reduce((acc, msg) => {
-        if (!acc[msg.session_id]) {
-          acc[msg.session_id] = {
-            session_id: msg.session_id,
-            timestamp: msg.timestamp,
-            first_message: msg.query || "Nouvelle conversation",
-            messages: []
-          };
-        }
-        acc[msg.session_id].messages.push(msg);
-        return acc;
-      }, {});
+      acc[msg.session_id].messages.push(msg);
+      return acc;
+    }, {});
+
+    const sessionList = Object.values(sessionMap).sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+
+    setSessions(sessionList);
+    return sessionList;
+  } catch (err) {
+    console.error('Erreur chargement sessions:', err);
+    throw err;
+  }
+};
 
       const sessionList = Object.values(sessionMap).sort(
         (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
