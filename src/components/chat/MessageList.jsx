@@ -36,7 +36,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                 // Message utilisateur
                 <div className="flex justify-start">
                   <div className="max-w-[80%]">
-                    <div className="bg-blue-600 text-white rounded-xl px-4 py-2">
+                    <div className="bg-blue-500/90 text-white rounded-xl px-4 py-2">
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                       <span className="text-xs opacity-75 block text-right mt-1">
                         {formatDate(msg.timestamp)}
@@ -54,8 +54,8 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                     <div className="max-w-[80%] ml-3">
                       <div className={`rounded-xl px-4 py-2 ${
                         isDark 
-                          ? 'bg-gray-800 text-gray-100' 
-                          : 'bg-gray-100 text-gray-900'
+                          ? 'bg-gray-800/90 text-gray-100' 
+                          : 'bg-gray-100/90 text-gray-900'
                       }`}>
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                         
@@ -87,7 +87,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
 
           {isLoading && (
             <div className="flex justify-center py-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-blue-400"></div>
             </div>
           )}
           
