@@ -11,7 +11,7 @@ export const useWebSocket = () => {
   const connect = useCallback(() => {
     try {
       console.log('Tentative de connexion WebSocket à:', config.WS_URL);
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(config.WS_URL);
 
       ws.onopen = () => {
         console.log('WebSocket connecté');
