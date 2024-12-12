@@ -20,50 +20,79 @@ const sortMessagesByTimestamp = (messages) => {
 
 export const useMessages = () => {
   const [messages, setMessages] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
 
-  // Initialisation de la session
+  // Charger la liste des sessions
+  const loadSessions = async () => {
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`);
+      if (!response.ok) throw new Error('Erreur chargement sessions');
+      
+      const history = await response.json();
+      
+      // Grouper les messages par session et extraire la première question
+      const sessionMap = history.reduce((acc, msg) => {
+        if (!acc[msg.session_id]) {
+          acc[msg.session_id] = {
+            session_id: msg.session_id,
+            timestamp: msg.timestamp,
+            first_message: msg.query || "Nouvelle conversation",
+            messages: []
+          };
+        }
+        acc[msg.session_id].messages.push(msg);
+        return acc;
+      }, {});
+
+      // Convertir en tableau et trier par date
+      const sessionList = Object.values(sessionMap).sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
+
+      setSessions(sessionList);
+    } catch (err) {
+      console.error('Erreur chargement sessions:', err);
+    }
+  };
+
+  // Initialisation
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        // Récupération ou génération du sessionId
+        await loadSessions();
         const savedSessionId = localStorage.getItem('chatSessionId');
-        const currentDeviceId = generateSessionId();
-        
-        if (savedSessionId && savedSessionId.startsWith(currentDeviceId.substring(0, 10))) {
+        if (savedSessionId) {
           setSessionId(savedSessionId);
           await loadSessionHistory(savedSessionId);
         } else {
-          const newSessionId = currentDeviceId;
+          const newSessionId = generateSessionId();
           setSessionId(newSessionId);
           localStorage.setItem('chatSessionId', newSessionId);
           await createNewSession(newSessionId);
         }
       } catch (err) {
-        console.error('Erreur initialisation session:', err);
-        setError('Erreur lors de l\'initialisation de la session');
+        setError('Erreur lors de l\'initialisation');
       }
     };
 
     initializeSession();
   }, []);
 
-  // Création d'une nouvelle session
-  const createNewSession = async (sid) => {
+  // Sélection d'une session
+  const selectSession = async (sid) => {
     try {
-      const response = await fetch(`${config.API_BASE_URL}/sessions/new?user_id=${config.DEFAULT_USER_ID}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!response.ok) throw new Error('Erreur création session');
-      return await response.json();
+      setIsLoading(true);
+      setSessionId(sid);
+      localStorage.setItem('chatSessionId', sid);
+      await loadSessionHistory(sid);
     } catch (err) {
-      console.error('Erreur création session:', err);
-      setError('Erreur lors de la création de la session');
-      return null;
+      console.error('Erreur sélection session:', err);
+      setError('Erreur lors du changement de session');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -191,11 +220,13 @@ export const useMessages = () => {
 
   return {
     messages,
+    sessions,
     isLoading,
     error,
     sessionId,
     sendMessage,
-    formatDate
+    formatDate,
+    selectSession
   };
 };
 
