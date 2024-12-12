@@ -1,7 +1,39 @@
 // src/services/messages/messageStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { apiClient } from '../api/client';
+import { config } from '../../config';
+
+// Client API simplifié intégré pour éviter les problèmes de dépendances circulaires
+const apiClient = {
+  async sendMessage(content, sessionId) {
+    const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.CHAT}`, {
+      method: 'POST',
+      headers: config.API.HEADERS,
+      body: JSON.stringify({
+        user_id: config.CHAT.DEFAULT_USER_ID,
+        query: content,
+        session_id: sessionId,
+        language: config.CHAT.DEFAULT_LANGUAGE
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de l\'envoi du message');
+    }
+
+    return response.json();
+  },
+
+  async getMessageHistory(sessionId) {
+    const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.HISTORY}/session/${sessionId}`);
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors du chargement de l\'historique');
+    }
+
+    return response.json();
+  }
+};
 
 const useMessageStore = create(
   persist(
