@@ -11,10 +11,12 @@ const ChatContainer = () => {
   const { isDark } = useTheme();
   const {
     messages,
+    sessions,
     isLoading,
     error,
     sendMessage,
-    sessionId
+    sessionId,
+    selectSession
   } = useMessages();
   const { connected } = useWebSocket();
 
@@ -23,6 +25,8 @@ const ChatContainer = () => {
       <ChatHeader 
         connected={connected} 
         sessionId={sessionId}
+        sessions={sessions}
+        onSelectSession={selectSession}
       />
       <div className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-900">
         <MessageList 
@@ -38,4 +42,5 @@ const ChatContainer = () => {
     </div>
   );
 };
+
 export default ChatContainer;
