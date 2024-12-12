@@ -1,24 +1,23 @@
+// src/hooks/useMessages.js
 import { useState, useEffect, useCallback } from 'react';
-import { config } from '../config'; 
+import { config } from '../config';
 
-export const useMessages = (userId = config.DEFAULT_USER_ID) => {
+export const useMessages = () => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
 
-  // Initialisation de la session et chargement de l'historique
+  // Initialisation de la session
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        // Vérifier s'il existe une session en cours
         const savedSessionId = localStorage.getItem('chatSessionId');
         
         if (savedSessionId) {
           setSessionId(savedSessionId);
           await loadSessionHistory(savedSessionId);
         } else {
-          // Créer une nouvelle session
           await createNewSession();
         }
       } catch (err) {
@@ -28,15 +27,14 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
     };
 
     initializeSession();
-  }, [userId]);
+  }, []);
 
   // Création d'une nouvelle session
   const createNewSession = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}sessions/new?user_id=${userId}`, {
+      const response = await fetch(`${config.API_BASE_URL}/sessions/new?user_id=${config.DEFAULT_USER_ID}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) throw new Error('Erreur création session');
@@ -53,52 +51,45 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
     }
   };
 
-  // Chargement de l'historique d'une session
+  // Chargement de l'historique
   const loadSessionHistory = async (sid) => {
-  try {
-    setIsLoading(true);
-    console.log('Loading history for session:', sid);
-    // Correction de l'URL pour correspondre à la doc OpenAPI
-    const url = `${config.API_BASE_URL}/history/user/${userId}`;
-    console.log('History URL:', url);
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('History error response:', text);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const history = await response.json();
-    console.log('History loaded:', history);
-    
-    const formattedMessages = history.map(msg => ({
-      id: msg.id || Date.now(),
-      content: msg.query || msg.response,
-      type: msg.query ? 'user' : 'assistant',
-      fragments: msg.fragments || [],
-      documents_used: msg.documents_used || [],
-      timestamp: new Date(msg.timestamp).toLocaleTimeString(),
-      confidence_score: msg.confidence_score
-    }));
+    try {
+      setIsLoading(true);
+      console.log('Loading history for session:', sid);
+      const url = `${config.API_BASE_URL}/history/user/${config.DEFAULT_USER_ID}`;
+      console.log('History URL:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('History error response:', text);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const history = await response.json();
+      console.log('History loaded:', history);
+      
+      const formattedMessages = history.map(msg => ({
+        id: msg.id || Date.now(),
+        content: msg.query || msg.response,
+        type: msg.query ? 'user' : 'assistant',
+        fragments: msg.fragments || [],
+        documents_used: msg.documents_used || [],
+        timestamp: new Date(msg.timestamp).toLocaleTimeString(),
+        confidence_score: msg.confidence_score
+      }));
 
-    setMessages(formattedMessages);
-  } catch (err) {
-    console.error('Detailed error loading history:', err);
-    setError('Erreur lors du chargement de l\'historique');
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setMessages(formattedMessages);
+    } catch (err) {
+      console.error('Detailed error loading history:', err);
+      setError('Erreur lors du chargement de l\'historique');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Envoi d'un message
-  export const useMessages = (userId = config.DEFAULT_USER_ID) => {
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [sessionId, setSessionId] = useState(null);
-
   const sendMessage = useCallback(async (content) => {
     if (!content.trim() || isLoading) return;
 
@@ -119,7 +110,7 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: userId,
+          user_id: config.DEFAULT_USER_ID,
           query: content,
           session_id: sessionId,
           language: 'fr'
@@ -153,7 +144,7 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, userId, isLoading]);
+  }, [sessionId, isLoading]);
 
   // Démarrage d'une nouvelle session
   const startNewSession = useCallback(async () => {
@@ -174,3 +165,5 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
     startNewSession
   };
 };
+
+export default useMessages;
