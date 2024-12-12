@@ -93,8 +93,14 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
 };
 
   // Envoi d'un message
+  export const useMessages = (userId = config.DEFAULT_USER_ID) => {
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+
   const sendMessage = useCallback(async (content) => {
-    if (!content.trim() || !sessionId) return;
+    if (!content.trim() || isLoading) return;
 
     try {
       setIsLoading(true);
@@ -109,7 +115,7 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
       setMessages(prev => [...prev, userMessage]);
 
       // Envoi au backend
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${config.API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,9 +126,14 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
         })
       });
 
-      if (!response.ok) throw new Error('Erreur communication serveur');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Erreur API:', errorText);
+        throw new Error('Erreur communication serveur');
+      }
       
       const data = await response.json();
+      console.log('Réponse du serveur:', data);
 
       // Ajout de la réponse à l'interface
       const assistantMessage = {
@@ -137,12 +148,12 @@ export const useMessages = (userId = config.DEFAULT_USER_ID) => {
       setMessages(prev => [...prev, assistantMessage]);
 
     } catch (err) {
-      setError('Erreur lors de l\'envoi du message');
       console.error('Erreur envoi message:', err);
+      setError('Erreur lors de l\'envoi du message');
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, userId]);
+  }, [sessionId, userId, isLoading]);
 
   // Démarrage d'une nouvelle session
   const startNewSession = useCallback(async () => {
