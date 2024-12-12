@@ -57,33 +57,41 @@ export const useMessages = (userId = DEFAULT_USER_ID) => {
 
   // Chargement de l'historique d'une session
   const loadSessionHistory = async (sid) => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/chat/history/user/${userId}`);
-      
-      if (!response.ok) throw new Error('Erreur chargement historique');
-      
-      const history = await response.json();
-      
-      // Formatage des messages
-      const formattedMessages = history.map(msg => ({
-        id: msg.id || Date.now(),
-        content: msg.query || msg.response,
-        type: msg.query ? 'user' : 'assistant',
-        fragments: msg.fragments || [],
-        documents_used: msg.documents_used || [],
-        timestamp: new Date(msg.timestamp).toLocaleTimeString(),
-        confidence_score: msg.confidence_score
-      }));
-
-      setMessages(formattedMessages);
-    } catch (err) {
-      setError('Erreur lors du chargement de l\'historique');
-      console.error('Erreur chargement historique:', err);
-    } finally {
-      setIsLoading(false);
+  try {
+    setIsLoading(true);
+    console.log('Loading history for session:', sid);
+    const url = `${config.API_BASE_URL}/chat/history/user/${userId}`;
+    console.log('History URL:', url);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('History error response:', text);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const history = await response.json();
+    console.log('History loaded:', history);
+    
+    const formattedMessages = history.map(msg => ({
+      id: msg.id || Date.now(),
+      content: msg.query || msg.response,
+      type: msg.query ? 'user' : 'assistant',
+      fragments: msg.fragments || [],
+      documents_used: msg.documents_used || [],
+      timestamp: new Date(msg.timestamp).toLocaleTimeString(),
+      confidence_score: msg.confidence_score
+    }));
+
+    setMessages(formattedMessages);
+  } catch (err) {
+    console.error('Detailed error loading history:', err);
+    setError('Erreur lors du chargement de l\'historique');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Envoi d'un message
   const sendMessage = useCallback(async (content) => {
