@@ -1,5 +1,5 @@
 // src/context/ChatContext.jsx
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useMessageStore from '../services/messages/messageStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -20,6 +20,9 @@ export function ChatProvider({ children }) {
   const { sessionId: routeSessionId } = useParams();
   const [error, setError] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isCreatingInitialSession, setIsCreatingInitialSession] = useState(false);
+  const initializationRef = useRef(false);
+
   const { connected, sendSocketMessage } = useWebSocket();
 
   const store = useMessageStore();
@@ -36,28 +39,39 @@ export function ChatProvider({ children }) {
 
   // Création de session sans navigation automatique
   const createNewSession = useCallback(async () => {
+    if (isCreatingInitialSession) return null;
+
     try {
+      setIsCreatingInitialSession(true);
       const newSessionId = await storeCreateNewSession();
-      console.log('Nouvelle session créée:', newSessionId);
-      return newSessionId;
+      
+      if (newSessionId) {
+        console.log('Nouvelle session créée:', newSessionId);
+        return newSessionId;
+      }
+      
+      return null;
     } catch (error) {
       console.error('Erreur création session:', error);
       setError('Erreur lors de la création de la session');
       return null;
+    } finally {
+      setIsCreatingInitialSession(false);
     }
   }, [storeCreateNewSession]);
 
   // Changement de session
   const changeSession = useCallback(async (sessionId) => {
     try {
-      if (!sessionId) return;
+      if (!sessionId || isLoading) return;
+      
       console.log('Changement vers session:', sessionId);
       await loadSessionMessages(sessionId);
     } catch (error) {
       console.error('Erreur changement session:', error);
       setError('Erreur lors du changement de session');
     }
-  }, [loadSessionMessages]);
+  }, [loadSessionMessages, isLoading]);
 
   // Gestion des messages
   const sendMessage = useCallback(async (content) => {
@@ -75,15 +89,19 @@ export function ChatProvider({ children }) {
   // Initialisation unique au démarrage
   useEffect(() => {
     const initialize = async () => {
-      if (isInitialized) return;
+      // Éviter les réinitialisations multiples
+      if (initializationRef.current || isInitialized) return;
       
       try {
+        initializationRef.current = true;
         console.log('Initialisation du chat...');
+        
         await loadSessions();
         
+        // Vérification et création de session initiale si nécessaire
         if (!currentSessionId && (!sessions || sessions.length === 0)) {
-          console.log('Création session initiale...');
           const newSessionId = await createNewSession();
+          
           if (newSessionId) {
             navigate(`/session/${newSessionId}`, { replace: true });
           }
@@ -93,24 +111,44 @@ export function ChatProvider({ children }) {
       } catch (error) {
         console.error('Erreur initialisation:', error);
         setError('Erreur lors de l\'initialisation');
+      } finally {
+        initializationRef.current = false;
       }
     };
 
     initialize();
-  }, [isInitialized, loadSessions, currentSessionId, sessions, createNewSession, navigate]);
+  }, [
+    isInitialized, 
+    loadSessions, 
+    currentSessionId, 
+    sessions, 
+    createNewSession, 
+    navigate
+  ]);
 
   // Gestion de la route
   useEffect(() => {
-    if (!isInitialized || !routeSessionId) return;
-
     const syncWithRoute = async () => {
+      // Conditions pour éviter les appels superflus
+      if (!isInitialized || 
+          !routeSessionId || 
+          isLoading || 
+          isCreatingInitialSession) return;
+
       if (routeSessionId && routeSessionId !== currentSessionId) {
         await changeSession(routeSessionId);
       }
     };
 
     syncWithRoute();
-  }, [isInitialized, routeSessionId, currentSessionId, changeSession]);
+  }, [
+    isInitialized, 
+    routeSessionId, 
+    currentSessionId, 
+    changeSession, 
+    isLoading,
+    isCreatingInitialSession
+  ]);
 
   // Nettoyage des erreurs
   useEffect(() => {
