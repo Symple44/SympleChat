@@ -1,52 +1,35 @@
-import React, { useEffect } from 'react';
+// src/components/chat/ChatContainer.jsx
+import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import { useMessages } from '../../hooks/useMessages';
-import { useWebSocket } from '../../hooks/useWebSocket';
-import { RefreshCw } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
-import { config } from '../../config';
+import { useChatContext } from '../../context/ChatContext';
 
 const ChatContainer = () => {
+  const { sessionId } = useParams();
   const {
     messages,
     sessions,
     isLoading,
     error,
-    sessionId,
-    sendMessage,
+    currentSessionId,
+    connected,
     changeSession,
-    loadSessions,
-    createNewSession
-  } = useMessages();
-  
-  const { connected } = useWebSocket();
-  const { isDark } = useTheme();
+    createNewSession,
+    sendMessage
+  } = useChatContext();
 
   useEffect(() => {
-    const initializeChat = async () => {
-      console.log('Initialisation du chat...');
-      try {
-        await loadSessions();
-        console.log('Sessions chargées:', sessions);
-        
-        if (!sessionId && (!sessions || sessions.length === 0)) {
-          console.log('Création d\'une nouvelle session...');
-          await createNewSession();
-        }
-      } catch (err) {
-        console.error('Erreur d\'initialisation:', err);
-      }
-    };
-
-    initializeChat();
-  }, []);
+    if (sessionId && sessionId !== currentSessionId) {
+      changeSession(sessionId);
+    }
+  }, [sessionId, currentSessionId]);
 
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="text-center p-8 rounded-lg bg-white dark:bg-gray-800 shadow-lg">
+        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
           <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -61,27 +44,27 @@ const ChatContainer = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <>
       <ChatHeader 
-        connected={connected} 
-        sessionId={sessionId}
+        connected={connected}
+        currentSessionId={currentSessionId}
         sessions={sessions}
         onSelectSession={changeSession}
         onNewSession={createNewSession}
       />
-      <div className={`flex-1 relative overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+      <div className="flex-1 relative overflow-hidden">
         <MessageList 
           messages={messages} 
           isLoading={isLoading}
-          currentSessionId={sessionId}
+          currentSessionId={currentSessionId}
         />
       </div>
       <MessageInput 
         onSend={sendMessage}
         isLoading={isLoading}
-        disabled={!connected || !sessionId}
+        disabled={!connected || !currentSessionId}
       />
-    </div>
+    </>
   );
 };
 
