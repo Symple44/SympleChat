@@ -1,5 +1,7 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext } from 'react';
+import { RouterProvider } from 'react-router-dom';
+import { createAppRouter } from '../config/router';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import ChatContainer from '../components/chat/ChatContainer';
 import useSessionNavigation from '../hooks/useSessionNavigation';
@@ -55,6 +57,16 @@ const AppWithProviders = () => {
   );
 };
 
+const AppWithProviders = () => {
+  return (
+    <ChatProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <ChatContainer />
+      </div>
+    </ChatProvider>
+  );
+};
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -77,6 +89,8 @@ const router = createBrowserRouter([
     v7_skipActionErrorRevalidation: true
   }
 });
+
+const router = createAppRouter(routes);
 
 export const ChatProviderWithRouter = () => (
   <RouterProvider router={router} />
