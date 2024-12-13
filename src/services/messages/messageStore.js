@@ -3,9 +3,28 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { config } from '../../config';
 
-// Helper pour construire les URLs d'API correctement
-const buildApiUrl = (endpoint) => {
-  return `${config.API.BASE_URL}${endpoint}`;
+// Helper pour les appels API
+const apiCall = async (endpoint, options = {}) => {
+  const url = `${config.API.BASE_URL}${endpoint}`;
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...config.API.HEADERS
+  };
+
+  console.log(`Making API call to: ${url}`, options);
+
+  const response = await fetch(url, {
+    headers: defaultHeaders,
+    ...options
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`API Error (${response.status}):`, errorText);
+    throw new Error(errorText || 'Erreur API');
+  }
+
+  return response.json();
 };
 
 const useMessageStore = create(
@@ -18,48 +37,43 @@ const useMessageStore = create(
       currentSessionId: null,
 
       // Actions de base
-      setMessages: (messages) => set({ messages }),
-      setSessions: (sessions) => set({ sessions }),
-      setError: (error) => set({ error }),
-      setLoading: (isLoading) => set({ isLoading }),
-      setCurrentSession: (sessionId) => set({ currentSessionId: sessionId }),
       clearMessages: () => set({ messages: [] }),
+      setError: (error) => set({ error }),
       
       // Gestion des sessions
       loadSessions: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch(
-            buildApiUrl(`/history/user/${config.CHAT.DEFAULT_USER_ID}`)
+          const history = await apiCall(
+            `/history/user/${config.CHAT.DEFAULT_USER_ID}`
           );
           
-          if (!response.ok) throw new Error('Erreur chargement historique');
-          
-          const history = await response.json();
-          
-          // Grouper par session
           const sessionGroups = history.reduce((groups, msg) => {
             if (!groups[msg.session_id]) {
               groups[msg.session_id] = {
                 messages: [],
-                timestamp: msg.timestamp
+                timestamp: msg.timestamp,
+                session_id: msg.session_id
               };
             }
             groups[msg.session_id].messages.push(msg);
+            
             if (new Date(msg.timestamp) > new Date(groups[msg.session_id].timestamp)) {
               groups[msg.session_id].timestamp = msg.timestamp;
             }
             return groups;
           }, {});
 
-          const sessions = Object.entries(sessionGroups).map(([sessionId, data]) => ({
-            session_id: sessionId,
-            timestamp: data.timestamp,
-            first_message: data.messages.find(m => m.query)?.query || "Nouvelle conversation"
+          const sessions = Object.values(sessionGroups).map(group => ({
+            session_id: group.session_id,
+            timestamp: group.timestamp,
+            first_message: group.messages.find(m => m.query)?.query || "Nouvelle conversation"
           }));
 
           sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
           set({ sessions });
+          console.log('Sessions chargées:', sessions);
+
         } catch (error) {
           console.error('Erreur chargement sessions:', error);
           set({ error: error.message });
@@ -71,18 +85,17 @@ const useMessageStore = create(
       createNewSession: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch(
-            buildApiUrl('/sessions/new'), 
-            {
-              method: 'POST',
-              headers: config.API.HEADERS,
-              body: JSON.stringify({ user_id: config.CHAT.DEFAULT_USER_ID })
-            }
-          );
-
-          if (!response.ok) throw new Error('Erreur création session');
+          console.log('Création nouvelle session...');
           
-          const data = await response.json();
+          const data = await apiCall('/chat/sessions/new', {
+            method: 'POST',
+            body: JSON.stringify({
+              user_id: config.CHAT.DEFAULT_USER_ID
+            })
+          });
+
+          console.log('Réponse création session:', data);
+
           const newSession = {
             session_id: data.session_id,
             timestamp: new Date().toISOString(),
@@ -108,13 +121,8 @@ const useMessageStore = create(
       loadSessionMessages: async (sessionId) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch(
-            buildApiUrl(`/history/session/${sessionId}`)
-          );
+          const messages = await apiCall(`/history/session/${sessionId}`);
           
-          if (!response.ok) throw new Error('Erreur chargement messages');
-          
-          const messages = await response.json();
           set({ 
             messages: messages.map(msg => ({
               id: msg.id || Date.now(),
@@ -127,10 +135,10 @@ const useMessageStore = create(
             })),
             currentSessionId: sessionId 
           });
+          
         } catch (error) {
           console.error('Erreur chargement messages:', error);
           set({ error: error.message });
-          throw error;
         } finally {
           set({ isLoading: false });
         }
@@ -141,37 +149,27 @@ const useMessageStore = create(
         set({ isLoading: true, error: null });
 
         try {
-          // Ajout du message utilisateur
           const userMessage = {
             id: Date.now(),
             content,
             type: 'user',
             timestamp: new Date().toISOString()
           };
+          
           set(state => ({
             messages: [...state.messages, userMessage]
           }));
 
-          // Envoi au serveur
-          const response = await fetch(
-            buildApiUrl('/chat'),
-            {
-              method: 'POST',
-              headers: config.API.HEADERS,
-              body: JSON.stringify({
-                user_id: config.CHAT.DEFAULT_USER_ID,
-                query: content,
-                session_id: currentSessionId,
-                language: config.CHAT.DEFAULT_LANGUAGE
-              })
-            }
-          );
+          const responseData = await apiCall('/chat', {
+            method: 'POST',
+            body: JSON.stringify({
+              user_id: config.CHAT.DEFAULT_USER_ID,
+              query: content,
+              session_id: currentSessionId,
+              language: config.CHAT.DEFAULT_LANGUAGE
+            })
+          });
 
-          if (!response.ok) throw new Error('Erreur envoi message');
-          
-          const responseData = await response.json();
-
-          // Ajout de la réponse
           const assistantMessage = {
             id: Date.now() + 1,
             content: responseData.response,
@@ -186,9 +184,7 @@ const useMessageStore = create(
             messages: [...state.messages, assistantMessage]
           }));
 
-          // Mise à jour des sessions
           await get().loadSessions();
-
           return responseData;
         } catch (error) {
           console.error('Erreur envoi message:', error);
