@@ -1,7 +1,7 @@
 // src/context/ChatContext.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createContext, useContext } from 'react';
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider, useNavigate, useLocation } from 'react-router-dom';
 import ChatContainer from '../components/chat/ChatContainer';
 import createAppRouter from '../config/router';
 import useSessionNavigation from '../hooks/useSessionNavigation';
@@ -48,12 +48,38 @@ export const ChatProvider = ({ children }) => {
 };
 
 const AppWrapper = () => {
+  const { currentSessionId, sessions, createNewSession } = useChatContext();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const init = async () => {
+      // Si on est sur la racine et qu'il y a une session courante
+      if (location.pathname === '/' && currentSessionId) {
+        navigate(`/session/${currentSessionId}`);
+        return;
+      }
+
+      // Si on est sur la racine et qu'il n'y a pas de session courante
+      if (location.pathname === '/') {
+        if (sessions.length > 0) {
+          // Utiliser la session la plus récente
+          navigate(`/session/${sessions[0].session_id}`);
+        } else {
+          // Créer une nouvelle session
+          const newSessionId = await createNewSession();
+          navigate(`/session/${newSessionId}`);
+        }
+      }
+    };
+
+    init();
+  }, [location.pathname, currentSessionId, sessions, createNewSession, navigate]);
+
   return (
-    <ChatProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-        <ChatContainer />
-      </div>
-    </ChatProvider>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <ChatContainer />
+    </div>
   );
 };
 
