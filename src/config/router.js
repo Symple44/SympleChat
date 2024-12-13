@@ -1,17 +1,24 @@
 // src/config/router.js
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 export const createAppRouter = (AppComponent) => {
   const routes = [
     {
       path: '/',
       element: AppComponent,
-      children: [
-        {
-          path: 'session/:sessionId',
-          element: AppComponent
-        }
-      ]
+    },
+    {
+      path: '/session',
+      element: <Navigate to="/" replace />
+    },
+    {
+      path: '/session/:sessionId',
+      element: AppComponent
+    },
+    {
+      // Capture toutes les autres routes non définies
+      path: '*',
+      element: <Navigate to="/" replace />
     }
   ];
 
