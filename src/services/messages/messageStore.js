@@ -87,7 +87,7 @@ const useMessageStore = create(
         try {
           console.log('Création nouvelle session...');
           
-          const data = await apiCall('/chat/sessions/new', {
+          const data = await apiCall('/sessions/new', {
             method: 'POST',
             body: JSON.stringify({
               user_id: config.CHAT.DEFAULT_USER_ID
