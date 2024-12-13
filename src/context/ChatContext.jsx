@@ -1,12 +1,9 @@
 // src/context/ChatContext.jsx
-import React from 'react';
-import { createContext, useContext } from 'react';
-import { RouterProvider, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import ChatContainer from '../components/chat/ChatContainer';
-import createAppRouter from '../config/router';
-import useSessionNavigation from '../hooks/useSessionNavigation';
-import useWebSocket from '../hooks/useWebSocket';
-import useMessages from '../hooks/useMessages';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import useMessageStore from '../services/messages/messageStore';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { config } from '../config';
 
 const ChatContext = createContext(null);
 
@@ -18,72 +15,154 @@ export const useChatContext = () => {
   return context;
 };
 
-const ChatApp = () => {
-  const { currentSessionId, sessions, createNewSession } = useChatContext();
+export function ChatProvider({ children }) {
+  // Navigation et params
   const navigate = useNavigate();
-  const location = useLocation();
+  const { sessionId: routeSessionId } = useParams();
 
-  React.useEffect(() => {
-    const init = async () => {
-      if (location.pathname === '/') {
-        if (currentSessionId) {
-          navigate(`/session/${currentSessionId}`);
-        } else if (sessions.length > 0) {
-          navigate(`/session/${sessions[0].session_id}`);
-        } else {
-          const newSessionId = await createNewSession();
-          navigate(`/session/${newSessionId}`);
-        }
+  // États locaux
+  const [error, setError] = useState(null);
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
+
+  // Integration WebSocket
+  const { connected, sendSocketMessage } = useWebSocket();
+
+  // Store des messages
+  const store = useMessageStore();
+  const {
+    messages,
+    sessions,
+    isLoading,
+    currentSessionId,
+    loadSessions,
+    createNewSession: storeCreateNewSession,
+    loadSessionMessages,
+    sendMessage: storeSendMessage
+  } = store;
+
+  // Gestion des sessions
+  const createNewSession = useCallback(async () => {
+    try {
+      const newSessionId = await storeCreateNewSession();
+      if (newSessionId) {
+        navigate(`/session/${newSessionId}`);
+        return newSessionId;
+      }
+    } catch (error) {
+      console.error('Erreur création session:', error);
+      setError('Erreur lors de la création de la session');
+    }
+  }, [storeCreateNewSession, navigate]);
+
+  const changeSession = useCallback(async (sessionId) => {
+    try {
+      if (!sessionId) return;
+      await loadSessionMessages(sessionId);
+      navigate(`/session/${sessionId}`);
+    } catch (error) {
+      console.error('Erreur changement session:', error);
+      setError('Erreur lors du changement de session');
+    }
+  }, [loadSessionMessages, navigate]);
+
+  // Gestion des messages
+  const sendMessage = useCallback(async (content) => {
+    try {
+      if (!content.trim() || isLoading) return;
+
+      if (!currentSessionId) {
+        await createNewSession();
+      }
+
+      const result = await storeSendMessage(content);
+      return result;
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+      setError('Erreur lors de l\'envoi du message');
+    }
+  }, [currentSessionId, createNewSession, storeSendMessage, isLoading]);
+
+  // Synchronisation avec l'URL
+  useEffect(() => {
+    const syncWithRoute = async () => {
+      if (routeSessionId && routeSessionId !== currentSessionId) {
+        await changeSession(routeSessionId);
       }
     };
 
-    init();
-  }, [location.pathname, currentSessionId, sessions, createNewSession, navigate]);
+    syncWithRoute();
+  }, [routeSessionId, currentSessionId, changeSession]);
 
-  return <ChatContainer />;
-};
+  // Chargement initial des sessions
+  useEffect(() => {
+    const initializeChat = async () => {
+      try {
+        await loadSessions();
+        
+        // Si pas de session active et pas de sessions existantes, en créer une
+        if (!currentSessionId && (!sessions || sessions.length === 0)) {
+          await createNewSession();
+        }
+      } catch (error) {
+        console.error('Erreur initialisation chat:', error);
+        setError('Erreur lors de l\'initialisation du chat');
+      }
+    };
 
-// Composant qui enveloppe l'application avec le contexte
-const AppWrapper = () => {
-  const sessionNav = useSessionNavigation();
-  const { connected } = useWebSocket();
-  const { 
-    messages, 
-    isLoading: messagesLoading, 
-    error: messagesError,
-    sendMessage
-  } = useMessages(sessionNav.currentSessionId);
+    initializeChat();
+  }, []);
 
+  // Effacer les erreurs après un délai
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // Valeur du contexte
   const contextValue = {
-    sessions: sessionNav.sessions,
-    currentSessionId: sessionNav.currentSessionId,
-    isLoading: sessionNav.isLoading || messagesLoading,
-    error: sessionNav.error || messagesError,
-    changeSession: sessionNav.changeSession,
-    createNewSession: sessionNav.createNewSession,
+    // État
     messages,
+    sessions,
+    isLoading,
+    error,
+    connected,
+    currentSessionId,
+    selectedDocuments,
+
+    // Actions
     sendMessage,
-    connected
+    createNewSession,
+    changeSession,
+    loadSessions,
+    setError,
+    setSelectedDocuments,
+    sendSocketMessage,
+
+    // Métadonnées
+    userId: config.CHAT.DEFAULT_USER_ID,
+    language: config.CHAT.DEFAULT_LANGUAGE,
+
+    // État détaillé pour le débogage
+    state: {
+      hasActiveSessions: sessions && sessions.length > 0,
+      messageCount: messages.length,
+      sessionCount: sessions?.length || 0,
+      wsConnected: connected
+    }
   };
 
   return (
     <ChatContext.Provider value={contextValue}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-        <ChatApp />
-      </div>
+      {children}
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
     </ChatContext.Provider>
   );
-};
-
-const RedirectRoot = () => <Navigate to="/" replace />;
-
-const router = createAppRouter(
-  <AppWrapper />,
-  <RedirectRoot />
-);
-
-export const ChatProviderWithRouter = () => (
-  <RouterProvider router={router} />
-);
+}
 
 export default ChatContext;
