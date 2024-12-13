@@ -1,7 +1,23 @@
 // src/config/router.js
 import { createBrowserRouter } from 'react-router-dom';
+import AppWithProviders from '../components/AppWithProviders';
 
-export const createAppRouter = (routes) => {
+// Définition des routes de l'application
+const routes = [
+  {
+    path: '/',
+    element: <AppWithProviders />,
+    children: [
+      {
+        path: 'session/:sessionId',
+        element: <AppWithProviders />
+      }
+    ]
+  }
+];
+
+// Configuration du router avec tous les flags futurs
+export const createAppRouter = () => {
   return createBrowserRouter(routes, {
     future: {
       v7_startTransition: true,
@@ -12,7 +28,8 @@ export const createAppRouter = (routes) => {
       v7_fetcherPersist: true,
       v7_skipActionErrorRevalidation: true
     },
-    basename: '/',
-    strict: true
+    basename: '/'
   });
 };
+
+export default createAppRouter;
