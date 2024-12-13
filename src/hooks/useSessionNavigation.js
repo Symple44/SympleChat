@@ -14,7 +14,10 @@ export const useSessionNavigation = () => {
   const loadSessions = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.HISTORY}/user/${config.CHAT.DEFAULT_USER_ID}`);
+      const response = await fetch(
+        `${config.API.BASE_URL}${config.API.ENDPOINTS.HISTORY}/user/${config.CHAT.DEFAULT_USER_ID}`
+      );
+      
       if (!response.ok) throw new Error('Erreur lors du chargement des sessions');
       
       const history = await response.json();
@@ -43,7 +46,6 @@ export const useSessionNavigation = () => {
 
       setSessions(sortedSessions);
 
-      // Si pas de session courante, prendre la plus récente
       if (!currentSessionId && sortedSessions.length > 0) {
         const latestSession = sortedSessions[0];
         setCurrentSessionId(latestSession.session_id);
@@ -66,16 +68,17 @@ export const useSessionNavigation = () => {
   const createNewSession = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.SESSIONS}/new?user_id=${config.CHAT.DEFAULT_USER_ID}`, {
-        method: 'POST'
-      });
+      const response = await fetch(
+        `${config.API.BASE_URL}${config.API.ENDPOINTS.SESSIONS}/new?user_id=${config.CHAT.DEFAULT_USER_ID}`,
+        { method: 'POST' }
+      );
       
       if (!response.ok) throw new Error('Erreur lors de la création de la session');
       
       const { session_id } = await response.json();
       setCurrentSessionId(session_id);
       navigate(`/session/${session_id}`);
-      await loadSessions(); // Recharger la liste des sessions
+      await loadSessions();
       return session_id;
     } catch (err) {
       console.error('Erreur création session:', err);
@@ -86,7 +89,6 @@ export const useSessionNavigation = () => {
     }
   };
 
-  // Initialisation et synchronisation avec l'URL
   useEffect(() => {
     const initializeSession = async () => {
       const sessionMatch = location.pathname.match(/\/session\/([^/]+)/);
