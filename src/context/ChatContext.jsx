@@ -1,7 +1,7 @@
 // src/context/ChatContext.jsx
 import React, { useEffect } from 'react';
 import { createContext, useContext } from 'react';
-import { RouterProvider, useNavigate, useLocation } from 'react-router-dom';
+import { RouterProvider, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import ChatContainer from '../components/chat/ChatContainer';
 import createAppRouter from '../config/router';
 import useSessionNavigation from '../hooks/useSessionNavigation';
@@ -54,19 +54,12 @@ const AppWrapper = () => {
 
   useEffect(() => {
     const init = async () => {
-      // Si on est sur la racine et qu'il y a une session courante
-      if (location.pathname === '/' && currentSessionId) {
-        navigate(`/session/${currentSessionId}`);
-        return;
-      }
-
-      // Si on est sur la racine et qu'il n'y a pas de session courante
       if (location.pathname === '/') {
-        if (sessions.length > 0) {
-          // Utiliser la session la plus récente
+        if (currentSessionId) {
+          navigate(`/session/${currentSessionId}`);
+        } else if (sessions.length > 0) {
           navigate(`/session/${sessions[0].session_id}`);
         } else {
-          // Créer une nouvelle session
           const newSessionId = await createNewSession();
           navigate(`/session/${newSessionId}`);
         }
@@ -83,7 +76,11 @@ const AppWrapper = () => {
   );
 };
 
-const router = createAppRouter(<AppWrapper />);
+const RedirectRoot = () => {
+  return <Navigate to="/" replace />;
+};
+
+const router = createAppRouter(<AppWrapper />, <RedirectRoot />);
 
 export const ChatProviderWithRouter = () => (
   <RouterProvider router={router} />
