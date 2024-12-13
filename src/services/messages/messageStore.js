@@ -42,6 +42,9 @@ const useMessageStore = create(
       
       // Gestion des sessions
       loadSessions: async () => {
+        // Ajout d'un verrou pour éviter les appels multiples
+        if (get().isLoading) return get().sessions;
+
         set({ isLoading: true, error: null });
         try {
           const history = await apiCall(
@@ -71,18 +74,29 @@ const useMessageStore = create(
           }));
 
           sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          set({ sessions });
+          
+          set({ 
+            sessions, 
+            isLoading: false 
+          });
+          
           console.log('Sessions chargées:', sessions);
+          return sessions;
 
         } catch (error) {
           console.error('Erreur chargement sessions:', error);
-          set({ error: error.message });
-        } finally {
-          set({ isLoading: false });
+          set({ 
+            error: error.message, 
+            isLoading: false 
+          });
+          return [];
         }
       },
 
       createNewSession: async () => {
+        // Verrou pour éviter les créations multiples
+        if (get().isLoading) return null;
+
         set({ isLoading: true, error: null });
         try {
           console.log('Création nouvelle session...');
@@ -106,11 +120,11 @@ const useMessageStore = create(
             first_message: "Nouvelle conversation"
           };
           
-          // Important: On met à jour d'abord currentSessionId
           set({
             sessions: [newSession, ...get().sessions],
             currentSessionId: newSession.session_id,
-            messages: []
+            messages: [],
+            isLoading: false
           });
           
           console.log('Nouvelle session créée avec ID:', newSession.session_id);
@@ -118,14 +132,18 @@ const useMessageStore = create(
           return newSession.session_id;
         } catch (error) {
           console.error('Erreur création session:', error);
-          set({ error: error.message });
-          throw error;
-        } finally {
-          set({ isLoading: false });
+          set({ 
+            error: error.message, 
+            isLoading: false 
+          });
+          return null;
         }
       },
 
       loadSessionMessages: async (sessionId) => {
+        // Verrou et validation des paramètres
+        if (get().isLoading || !sessionId) return;
+
         set({ isLoading: true, error: null });
         try {
           const messages = await apiCall(`/history/session/${sessionId}`);
@@ -140,19 +158,28 @@ const useMessageStore = create(
               fragments: msg.fragments || [],
               confidence: msg.confidence_score
             })),
-            currentSessionId: sessionId 
+            currentSessionId: sessionId,
+            isLoading: false
           });
           
         } catch (error) {
           console.error('Erreur chargement messages:', error);
-          set({ error: error.message });
-        } finally {
-          set({ isLoading: false });
+          set({ 
+            error: error.message, 
+            isLoading: false 
+          });
         }
       },
 
       sendMessage: async (content) => {
         const { currentSessionId } = get();
+        
+        // Vérification des paramètres
+        if (!content || !currentSessionId) return null;
+        
+        // Verrou pour éviter les envois multiples
+        if (get().isLoading) return null;
+
         set({ isLoading: true, error: null });
 
         try {
@@ -188,17 +215,19 @@ const useMessageStore = create(
           };
           
           set(state => ({
-            messages: [...state.messages, assistantMessage]
+            messages: [...state.messages, assistantMessage],
+            isLoading: false
           }));
 
-          await get().loadSessions();
+          // MODIFICATION IMPORTANTE : Supprimer l'appel à loadSessions()
           return responseData;
         } catch (error) {
           console.error('Erreur envoi message:', error);
-          set({ error: error.message });
+          set({ 
+            error: error.message, 
+            isLoading: false 
+          });
           throw error;
-        } finally {
-          set({ isLoading: false });
         }
       }
     }),
