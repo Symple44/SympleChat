@@ -1,119 +1,108 @@
-// src/hooks/useMessages.js
-import { useState, useEffect } from 'react';
-import { config } from '../config';
+import { useCallback, useEffect } from 'react';
+import useMessageStore from '../services/messages/messageStore';
 
-const formatMessage = (message) => {
-  // Si c'est un message de l'historique
-  if (message.query || message.response) {
-    return {
-      id: message.id || Date.now(),
-      content: message.query || message.response,
-      type: message.query ? 'user' : 'assistant',
-      timestamp: message.timestamp || new Date().toISOString(),
-      documents: message.documents_used || [],
-      fragments: message.fragments || [],
-      confidence: message.confidence_score
-    };
-  }
+export const useMessages = () => {
+  const store = useMessageStore();
   
-  // Si c'est un nouveau message
-  return {
-    id: message.id || Date.now(),
-    content: message.content,
-    type: message.type,
-    timestamp: message.timestamp || new Date().toISOString(),
-    documents: message.documents || [],
-    fragments: message.fragments || [],
-    confidence: message.confidence
-  };
-};
+  const loadSessions = useCallback(async () => {
+    try {
+      await store.loadSessions();
+    } catch (error) {
+      console.error('Erreur lors du chargement des sessions:', error);
+    }
+  }, []);
 
-export const useMessages = (sessionId) => {
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const sendMessage = useCallback(async (content) => {
+    if (!content.trim() || store.isLoading) return;
+    
+    try {
+      await store.sendMessage(content);
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+      throw error;
+    }
+  }, [store.isLoading, store.sendMessage]);
 
+  const changeSession = useCallback(async (sessionId) => {
+    if (sessionId === store.currentSessionId) return;
+    try {
+      store.clearMessages();
+      await store.loadSessionMessages(sessionId);
+    } catch (error) {
+      console.error('Erreur changement session:', error);
+      throw error;
+    }
+  }, [store.currentSessionId]);
+
+  const createNewSession = useCallback(async () => {
+    try {
+      const newSessionId = await store.createNewSession();
+      return newSessionId;
+    } catch (error) {
+      console.error('Erreur création session:', error);
+      throw error;
+    }
+  }, []);
+
+  const clearSessionHistory = useCallback(async () => {
+    try {
+      store.clearMessages();
+    } catch (error) {
+      console.error('Erreur nettoyage historique:', error);
+    }
+  }, []);
+
+  // Chargement initial des sessions
   useEffect(() => {
-    const loadSessionMessages = async () => {
-      if (!sessionId) return;
-      
-      setIsLoading(true);
+    const initializeChat = async () => {
       try {
-        const response = await fetch(
-          `${config.API.BASE_URL}${config.API.ENDPOINTS.HISTORY}/session/${sessionId}`
-        );
+        console.log('Initialisation du chat...');
+        await loadSessions();
         
-        if (!response.ok) throw new Error('Erreur chargement messages');
-        
-        const data = await response.json();
-        const formattedMessages = data.map(formatMessage);
-        setMessages(formattedMessages);
-      } catch (err) {
-        console.error('Erreur chargement messages:', err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+        // Si pas de session active et pas de sessions existantes, en créer une
+        if (!store.currentSessionId && (!store.sessions || store.sessions.length === 0)) {
+          console.log('Création d\'une nouvelle session...');
+          await createNewSession();
+        }
+      } catch (error) {
+        console.error('Erreur initialisation:', error);
       }
     };
 
-    loadSessionMessages();
-  }, [sessionId]);
+    initializeChat();
+  }, []);
 
-  const sendMessage = async (content) => {
-    if (!sessionId || !content.trim() || isLoading) return;
-
-    try {
-      setIsLoading(true);
-      
-      // Ajouter le message de l'utilisateur immédiatement
-      const userMessage = formatMessage({
-        content,
-        type: 'user',
-        timestamp: new Date().toISOString()
-      });
-      setMessages(prev => [...prev, userMessage]);
-
-      // Envoyer au serveur
-      const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.CHAT}`, {
-        method: 'POST',
-        headers: config.API.HEADERS,
-        body: JSON.stringify({
-          user_id: config.CHAT.DEFAULT_USER_ID,
-          query: content,
-          session_id: sessionId,
-          language: config.CHAT.DEFAULT_LANGUAGE
-        })
-      });
-
-      if (!response.ok) throw new Error('Erreur envoi message');
-      
-      const data = await response.json();
-      
-      // Ajouter la réponse de l'assistant
-      const assistantMessage = formatMessage({
-        content: data.response,
-        type: 'assistant',
-        documents: data.documents_used,
-        fragments: data.fragments,
-        confidence: data.confidence_score,
-        timestamp: new Date().toISOString()
-      });
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      
-    } catch (err) {
-      console.error('Erreur envoi message:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+  // Recharger les sessions quand le sessionId change
+  useEffect(() => {
+    if (store.currentSessionId) {
+      loadSessions();
     }
-  };
+  }, [store.currentSessionId]);
 
   return {
-    messages,
-    isLoading,
-    error,
-    sendMessage
+    // État des messages et sessions
+    messages: store.messages,
+    sessions: store.sessions,
+    isLoading: store.isLoading,
+    error: store.error,
+    sessionId: store.currentSessionId,
+
+    // Actions sur les messages
+    sendMessage,
+    clearSessionHistory,
+
+    // Actions sur les sessions
+    changeSession,
+    createNewSession,
+    loadSessions,
+
+    // État détaillé pour le débogage
+    state: {
+      hasActiveSessions: store.sessions && store.sessions.length > 0,
+      activeSessionId: store.currentSessionId,
+      messageCount: store.messages.length,
+      sessionCount: store.sessions?.length || 0
+    }
   };
 };
 
