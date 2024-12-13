@@ -33,11 +33,12 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
         <div className="w-full max-w-3xl mx-auto">
           {messages.map((msg) => (
             <div key={msg.id} className="mb-4">
-              {msg.type === 'user' ? (
+              {(msg.type === 'user' || msg.query) ? (
+                // Message utilisateur
                 <div className="flex justify-end">
                   <div className="max-w-[80%]">
                     <div className="bg-blue-600 text-white rounded-lg px-4 py-2">
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className="whitespace-pre-wrap">{msg.query || msg.content}</p>
                       <span className="text-xs opacity-75 block text-right mt-1">
                         {formatDate(msg.timestamp)}
                       </span>
@@ -45,6 +46,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                   </div>
                 </div>
               ) : (
+                // Message assistant
                 <div className="flex items-start">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900 mr-2">
                     <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -52,7 +54,7 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                   <div className="max-w-[80%]">
                     <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2">
                       <p className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">
-                        {msg.content}
+                        {msg.response || msg.content}
                       </p>
                       
                       {msg.fragments?.length > 0 && (
@@ -93,8 +95,10 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
         <div className="fixed bottom-20 right-4">
           <div className="px-3 py-1 rounded text-xs bg-white dark:bg-gray-800 shadow-sm border dark:border-gray-700">
             <span className="text-gray-500 dark:text-gray-400">
-              Session: {currentSessionId || 'Aucune'}
+              {config.CHAT.DEFAULT_USER_ID}
             </span>
+            <span className="mx-2 opacity-50">|</span>
+            <span>Session: {currentSessionId || 'Aucune'}</span>
           </div>
         </div>
       </div>
