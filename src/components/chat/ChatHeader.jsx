@@ -10,21 +10,32 @@ const ChatHeader = ({ connected, sessionId, sessions, onSelectSession, onNewSess
 
   const handleNewSession = async () => {
     try {
-      await onNewSession();
-      setShowSessions(false);
+      const newSessionId = await onNewSession();
+      if (newSessionId) {
+        console.log('Nouvelle session créée:', newSessionId);
+        setShowSessions(false);
+      } else {
+        console.error('Pas de sessionId retourné par createNewSession');
+      }
     } catch (error) {
-      console.error('Erreur création nouvelle session:', error);
+      console.error('Erreur lors de la création de session:', error);
     }
   };
 
   const handleSessionSelect = async (sid) => {
+    if (!sid) {
+      console.error('Tentative de sélection de session sans ID');
+      return;
+    }
     try {
       await onSelectSession(sid);
       setShowSessions(false);
+      console.log('Session sélectionnée:', sid);
     } catch (error) {
-      console.error('Erreur sélection session:', error);
+      console.error('Erreur lors de la sélection de la session:', error);
     }
   };
+
 
   return (
     <header className="relative bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3">
