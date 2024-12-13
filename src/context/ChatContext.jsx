@@ -1,6 +1,8 @@
 // src/context/ChatContext.jsx
+import React from 'react';
 import { createContext, useContext } from 'react';
 import { RouterProvider } from 'react-router-dom';
+import ChatContainer from '../components/chat/ChatContainer';
 import createAppRouter from '../config/router';
 import useSessionNavigation from '../hooks/useSessionNavigation';
 import useWebSocket from '../hooks/useWebSocket';
@@ -45,10 +47,20 @@ export const ChatProvider = ({ children }) => {
   );
 };
 
-const router = createAppRouter();
-
-export const ChatProviderWithRouter = () => {
-  return <RouterProvider router={router} />;
+const AppWrapper = () => {
+  return (
+    <ChatProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <ChatContainer />
+      </div>
+    </ChatProvider>
+  );
 };
+
+const router = createAppRouter(<AppWrapper />);
+
+export const ChatProviderWithRouter = () => (
+  <RouterProvider router={router} />
+);
 
 export default ChatContext;
