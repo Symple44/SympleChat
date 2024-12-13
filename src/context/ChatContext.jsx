@@ -1,10 +1,10 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import ChatContainer from '../components/chat/ChatContainer';
 import useSessionNavigation from '../hooks/useSessionNavigation';
 import useWebSocket from '../hooks/useWebSocket';
 import useMessages from '../hooks/useMessages';
-import App from '../App';
 
 const ChatContext = createContext(null);
 
@@ -15,28 +15,6 @@ export const useChatContext = () => {
   }
   return context;
 };
-
-// Configuration du routeur avec tous les future flags
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <App />,
-    children: [
-      {
-        path: 'session/:sessionId',
-        element: <App />
-      }
-    ]
-  }
-], {
-  future: {
-    v7_startTransition: true,
-    v7_normalizeFormMethod: true,
-    v7_partialHydration: true,
-    v7_fetcherPersist: true,
-    v7_skipActionErrorRevalidation: true
-  }
-});
 
 const ChatProvider = ({ children }) => {
   const sessionNav = useSessionNavigation();
@@ -67,12 +45,40 @@ const ChatProvider = ({ children }) => {
   );
 };
 
-export const ChatProviderWithRouter = () => (
-  <RouterProvider router={router}>
+const AppWithProviders = () => {
+  return (
     <ChatProvider>
-      <App />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <ChatContainer />
+      </div>
     </ChatProvider>
-  </RouterProvider>
+  );
+};
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <AppWithProviders />,
+    children: [
+      {
+        path: 'session/:sessionId',
+        element: <AppWithProviders />
+      }
+    ]
+  }
+], {
+  future: {
+    v7_startTransition: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_fetcherPersist: true,
+    v7_relativeSplatPath: true
+  }
+});
+
+export const ChatProviderWithRouter = () => (
+  <RouterProvider router={router} />
 );
 
+export { ChatProvider };
 export default ChatContext;
