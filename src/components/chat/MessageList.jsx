@@ -30,14 +30,14 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
   return (
     <>
       <div className="h-full overflow-y-auto px-4 py-4">
-        <div className="w-full max-w-3xl mx-auto">
+        <div className="w-full">
           {messages.map((msg) => (
-            <div key={msg.id} className="mb-4">
+            <div key={msg.id} className="mb-3">
               {(msg.type === 'user' || msg.query) ? (
-                // Message utilisateur
+                // Message utilisateur - à droite
                 <div className="flex justify-end">
                   <div className="max-w-[80%]">
-                    <div className="bg-blue-600 text-white rounded-lg px-4 py-2">
+                    <div className="bg-blue-500/90 text-white rounded-xl px-4 py-2">
                       <p className="whitespace-pre-wrap">{msg.query || msg.content}</p>
                       <span className="text-xs opacity-75 block text-right mt-1">
                         {formatDate(msg.timestamp)}
@@ -46,34 +46,38 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
                   </div>
                 </div>
               ) : (
-                // Message assistant
+                // Message assistant - à gauche
                 <div className="flex items-start">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900 mr-2">
-                    <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="max-w-[80%]">
-                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2">
-                      <p className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">
-                        {msg.response || msg.content}
-                      </p>
-                      
-                      {msg.fragments?.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {msg.fragments.map((doc, index) => (
-                            <DocumentPreview
-                              key={index}
-                              document={doc}
-                              onClick={() => setSelectedDocument(doc)}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-1 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                        <span>{formatDate(msg.timestamp)}</span>
-                        {msg.confidence && (
-                          <span>Confiance: {(msg.confidence * 100).toFixed(0)}%</span>
+                  <div className="flex items-start">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-indigo-500 to-blue-600">
+                      <Bot size={16} className="text-white" />
+                    </div>
+                    <div className="max-w-[80%] ml-3">
+                      <div className={`rounded-xl px-4 py-2 ${
+                        isDark 
+                          ? 'bg-gray-800/90 text-gray-100' 
+                          : 'bg-gray-100/90 text-gray-900'
+                      }`}>
+                        <p className="whitespace-pre-wrap">{msg.response || msg.content}</p>
+                        
+                        {msg.fragments?.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {msg.fragments.map((doc, index) => (
+                              <DocumentPreview
+                                key={index}
+                                document={doc}
+                                onClick={() => setSelectedDocument(doc)}
+                              />
+                            ))}
+                          </div>
                         )}
+
+                        <div className="mt-1 flex justify-between items-center text-xs opacity-75">
+                          <span>{formatDate(msg.timestamp)}</span>
+                          {msg.confidence && (
+                            <span>Confiance: {(msg.confidence * 100).toFixed(0)}%</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -84,19 +88,21 @@ const MessageList = ({ messages, isLoading, currentSessionId }) => {
 
           {isLoading && (
             <div className="flex justify-center py-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-blue-400"></div>
             </div>
           )}
           
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Info session */}
-        <div className="fixed bottom-20 right-4">
-          <div className="px-3 py-1 rounded text-xs bg-white dark:bg-gray-800 shadow-sm border dark:border-gray-700">
-            <span className="text-gray-500 dark:text-gray-400">
-              {config.CHAT.DEFAULT_USER_ID}
-            </span>
+        {/* Bandeau d'information en bas */}
+        <div className="fixed bottom-16 right-4">
+          <div className={`px-3 py-1 rounded-lg text-xs font-mono shadow-sm ${
+            isDark 
+              ? 'bg-gray-800 text-gray-300 border border-gray-700' 
+              : 'bg-white text-gray-600 border border-gray-200'
+          }`}>
+            <span className="opacity-75">{config.CHAT.DEFAULT_USER_ID}</span>
             <span className="mx-2 opacity-50">|</span>
             <span>Session: {currentSessionId || 'Aucune'}</span>
           </div>
