@@ -1,24 +1,29 @@
 // src/App.jsx
-import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ChatContainer from './components/chat/ChatContainer';
-import { useChatContext } from './context/ChatContext';
+import useChat from './hooks/useChat';
+import { updatePageTitle } from './utils/pageTitle';
 
 function App() {
-  const { currentSessionId } = useChatContext();
   const navigate = useNavigate();
-  const params = useParams();
-
+  const chatProps = useChat();
+  
   useEffect(() => {
-    if (!params.sessionId && currentSessionId) {
-      navigate(`/session/${currentSessionId}`);
+    updatePageTitle();
+  }, []);
+
+  // Effet pour gérer la navigation quand le sessionId change
+  useEffect(() => {
+    if (chatProps.sessionId) {
+      console.log('Navigation vers session:', chatProps.sessionId);
+      navigate(`/session/${chatProps.sessionId}`, { replace: true });
     }
-  }, [currentSessionId, params.sessionId, navigate]);
+  }, [chatProps.sessionId, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-      <ChatContainer />
-      <Outlet />
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <ChatContainer {...chatProps} />
     </div>
   );
 }
