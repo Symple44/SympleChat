@@ -1,5 +1,5 @@
 // src/context/ChatContext.jsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createContext, useContext } from 'react';
 import { RouterProvider, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import ChatContainer from '../components/chat/ChatContainer';
@@ -18,7 +18,33 @@ export const useChatContext = () => {
   return context;
 };
 
-export const ChatProvider = ({ children }) => {
+const ChatApp = () => {
+  const { currentSessionId, sessions, createNewSession } = useChatContext();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const init = async () => {
+      if (location.pathname === '/') {
+        if (currentSessionId) {
+          navigate(`/session/${currentSessionId}`);
+        } else if (sessions.length > 0) {
+          navigate(`/session/${sessions[0].session_id}`);
+        } else {
+          const newSessionId = await createNewSession();
+          navigate(`/session/${newSessionId}`);
+        }
+      }
+    };
+
+    init();
+  }, [location.pathname, currentSessionId, sessions, createNewSession, navigate]);
+
+  return <ChatContainer />;
+};
+
+// Composant qui enveloppe l'application avec le contexte
+const AppWrapper = () => {
   const sessionNav = useSessionNavigation();
   const { connected } = useWebSocket();
   const { 
@@ -42,45 +68,19 @@ export const ChatProvider = ({ children }) => {
 
   return (
     <ChatContext.Provider value={contextValue}>
-      {children}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <ChatApp />
+      </div>
     </ChatContext.Provider>
   );
 };
 
-const AppWrapper = () => {
-  const { currentSessionId, sessions, createNewSession } = useChatContext();
-  const navigate = useNavigate();
-  const location = useLocation();
+const RedirectRoot = () => <Navigate to="/" replace />;
 
-  useEffect(() => {
-    const init = async () => {
-      if (location.pathname === '/') {
-        if (currentSessionId) {
-          navigate(`/session/${currentSessionId}`);
-        } else if (sessions.length > 0) {
-          navigate(`/session/${sessions[0].session_id}`);
-        } else {
-          const newSessionId = await createNewSession();
-          navigate(`/session/${newSessionId}`);
-        }
-      }
-    };
-
-    init();
-  }, [location.pathname, currentSessionId, sessions, createNewSession, navigate]);
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-      <ChatContainer />
-    </div>
-  );
-};
-
-const RedirectRoot = () => {
-  return <Navigate to="/" replace />;
-};
-
-const router = createAppRouter(<AppWrapper />, <RedirectRoot />);
+const router = createAppRouter(
+  <AppWrapper />,
+  <RedirectRoot />
+);
 
 export const ChatProviderWithRouter = () => (
   <RouterProvider router={router} />
