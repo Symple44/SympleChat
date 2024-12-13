@@ -36,13 +36,20 @@ export const useMessages = () => {
 
   const createNewSession = useCallback(async () => {
     try {
-      const newSessionId = await store.createNewSession();
-      return newSessionId;
+      console.log('Création d\'une nouvelle session...');
+      const sessionId = await store.createNewSession();
+      
+      if (!sessionId) {
+        throw new Error('Pas de sessionId retourné');
+      }
+      
+      console.log('Nouvelle session créée:', sessionId);
+      return sessionId;
     } catch (error) {
       console.error('Erreur création session:', error);
       throw error;
     }
-  }, []);
+  }, [store]);
 
   const clearSessionHistory = useCallback(async () => {
     try {
@@ -57,11 +64,11 @@ export const useMessages = () => {
     const initializeChat = async () => {
       try {
         console.log('Initialisation du chat...');
-        await loadSessions();
+        await store.loadSessions();
         
         // Si pas de session active et pas de sessions existantes, en créer une
         if (!store.currentSessionId && (!store.sessions || store.sessions.length === 0)) {
-          console.log('Création d\'une nouvelle session...');
+          console.log('Création d\'une session initiale...');
           await createNewSession();
         }
       } catch (error) {
@@ -94,7 +101,8 @@ export const useMessages = () => {
     // Actions sur les sessions
     changeSession,
     createNewSession,
-    loadSessions,
+    changeSession: store.loadSessionMessages,
+    loadSessions: store.loadSessions,
 
     // État détaillé pour le débogage
     state: {
