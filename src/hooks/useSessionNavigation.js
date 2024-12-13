@@ -46,10 +46,17 @@ export const useSessionNavigation = () => {
 
       setSessions(sortedSessions);
 
-      if (!currentSessionId && sortedSessions.length > 0) {
-        const latestSession = sortedSessions[0];
-        setCurrentSessionId(latestSession.session_id);
-        navigate(`/session/${latestSession.session_id}`);
+      // Si pas de session active dans l'URL
+      if (!location.pathname.includes('/session/')) {
+        if (sortedSessions.length > 0) {
+          // Utiliser la dernière session
+          const latestSession = sortedSessions[0];
+          setCurrentSessionId(latestSession.session_id);
+          navigate(`/session/${latestSession.session_id}`);
+        } else {
+          // Créer une nouvelle session si aucune n'existe
+          createNewSession();
+        }
       }
     } catch (err) {
       console.error('Erreur chargement sessions:', err);
@@ -57,12 +64,6 @@ export const useSessionNavigation = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const changeSession = async (sessionId) => {
-    if (sessionId === currentSessionId) return;
-    setCurrentSessionId(sessionId);
-    navigate(`/session/${sessionId}`);
   };
 
   const createNewSession = async () => {
@@ -89,6 +90,13 @@ export const useSessionNavigation = () => {
     }
   };
 
+  const changeSession = async (sessionId) => {
+    if (sessionId === currentSessionId) return;
+    setCurrentSessionId(sessionId);
+    navigate(`/session/${sessionId}`);
+  };
+
+  // Initialisation et synchronisation avec l'URL
   useEffect(() => {
     const initializeSession = async () => {
       const sessionMatch = location.pathname.match(/\/session\/([^/]+)/);
