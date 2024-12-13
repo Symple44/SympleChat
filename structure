@@ -15,10 +15,12 @@
 │   │       ├── ChatHeader.jsx         # En-tête avec gestion des sessions
 │   │       ├── MessageList.jsx        # Liste des messages avec thème
 │   │       ├── MessageInput.jsx       # Zone de saisie des messages
-│   │       └── DocumentViewer.jsx     # Visualisation des documents
+│   │       ├── DocumentViewer.jsx     # Visualisation des documents
+│   │       └── DocumentPreview.jsx    # Aperçu des documents
 │   │
 │   ├── config/             # Configuration
-│   │   └── index.js        # Configuration centralisée (API, WebSocket, etc.)
+│   │   ├── index.js        # Configuration centralisée (API, WebSocket, etc.)
+│   │   └── router.js       # Configuration du routage
 │   │
 │   ├── context/           # Contextes React
 │   │   ├── ChatContext.jsx  # Contexte pour le chat
@@ -27,32 +29,33 @@
 │   ├── hooks/             # Hooks personnalisés
 │   │   ├── useChat.js       # Hook principal du chat
 │   │   ├── useMessages.js   # Gestion des messages
+│   │   ├── useSession.js    # Gestion des sessions
 │   │   └── useWebSocket.js  # Connexion WebSocket
 │   │
 │   ├── services/          # Services
-│   │   ├── messages/
-│   │   │   └── messageStore.js  # Store Zustand pour les messages
-│   │   └── api/
-│   │       └── client.js        # Client API unifié
+│   │   ├── api.js           # Client API unifié
+│   │   ├── chatService.js   # Service de chat
+│   │   └── client.js        # Client API spécifique
 │   │
 │   ├── styles/           # Styles
 │   │   └── main.css      # Styles globaux et Tailwind
 │   │
 │   ├── utils/            # Utilitaires
 │   │   ├── dateFormatter.js    # Formatage des dates
-│   │   └── messageParser.js    # Parsing des messages
+│   │   ├── messageParser.js    # Parsing des messages
+│   │   └── pageTitle.js        # Gestion du titre de page
 │   │
 │   ├── App.jsx           # Composant racine
 │   └── main.jsx         # Point d'entrée
 │
-├── .gitignore
-├── eslint.config.js      # Configuration ESLint
-├── index.html           # HTML racine
-├── package.json         # Configuration npm
-├── postcss.config.js    # Configuration PostCSS
-├── README.md           # Documentation
-├── serve.json          # Configuration du serveur de production
-├── tailwind.config.js  # Configuration Tailwind
+├── .gitignore           # Fichiers ignorés par Git
+├── eslint.config.js     # Configuration ESLint
+├── index.html          # HTML racine
+├── package.json        # Configuration npm et dépendances
+├── postcss.config.js   # Configuration PostCSS
+├── README.md          # Documentation
+├── serve.json         # Configuration du serveur de production
+├── tailwind.config.js # Configuration Tailwind
 ├── update.sh          # Script de mise à jour
 ├── vercel.json        # Configuration Vercel
 └── vite.config.js     # Configuration Vite
