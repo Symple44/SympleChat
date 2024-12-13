@@ -16,18 +16,12 @@ export const useChatContext = () => {
 };
 
 export function ChatProvider({ children }) {
-  // Navigation et params
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams();
-
-  // États locaux
   const [error, setError] = useState(null);
-  const [selectedDocuments, setSelectedDocuments] = useState([]);
-
-  // Integration WebSocket
+  const [isInitialized, setIsInitialized] = useState(false);
   const { connected, sendSocketMessage } = useWebSocket();
 
-  // Store des messages
   const store = useMessageStore();
   const {
     messages,
@@ -40,50 +34,75 @@ export function ChatProvider({ children }) {
     sendMessage: storeSendMessage
   } = store;
 
-  // Gestion des sessions
+  // Création de session sans navigation automatique
   const createNewSession = useCallback(async () => {
     try {
       const newSessionId = await storeCreateNewSession();
-      if (newSessionId) {
-        navigate(`/session/${newSessionId}`);
-        return newSessionId;
-      }
+      console.log('Nouvelle session créée:', newSessionId);
+      return newSessionId;
     } catch (error) {
       console.error('Erreur création session:', error);
       setError('Erreur lors de la création de la session');
+      return null;
     }
-  }, [storeCreateNewSession, navigate]);
+  }, [storeCreateNewSession]);
 
+  // Changement de session
   const changeSession = useCallback(async (sessionId) => {
     try {
       if (!sessionId) return;
+      console.log('Changement vers session:', sessionId);
       await loadSessionMessages(sessionId);
-      navigate(`/session/${sessionId}`);
     } catch (error) {
       console.error('Erreur changement session:', error);
       setError('Erreur lors du changement de session');
     }
-  }, [loadSessionMessages, navigate]);
+  }, [loadSessionMessages]);
 
   // Gestion des messages
   const sendMessage = useCallback(async (content) => {
+    if (!content.trim() || isLoading) return;
+    
     try {
-      if (!content.trim() || isLoading) return;
-
-      if (!currentSessionId) {
-        await createNewSession();
-      }
-
       const result = await storeSendMessage(content);
       return result;
     } catch (error) {
       console.error('Erreur envoi message:', error);
       setError('Erreur lors de l\'envoi du message');
     }
-  }, [currentSessionId, createNewSession, storeSendMessage, isLoading]);
+  }, [storeSendMessage, isLoading]);
 
-  // Synchronisation avec l'URL
+  // Initialisation unique au démarrage
   useEffect(() => {
+    const initialize = async () => {
+      if (isInitialized) return;
+      
+      try {
+        console.log('Initialisation du chat...');
+        await loadSessions();
+        
+        if (!currentSessionId && (!sessions || sessions.length === 0)) {
+          console.log('Création session initiale...');
+          const newSessionId = await createNewSession();
+          if (newSessionId) {
+            navigate(`/session/${newSessionId}`, { replace: true });
+          }
+        }
+        
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Erreur initialisation:', error);
+        setError('Erreur lors de l\'initialisation');
+      }
+    };
+
+    initialize();
+  }, [isInitialized, loadSessions, currentSessionId, sessions, createNewSession, navigate]);
+
+  // Gestion de la route
+  useEffect(() => {
+    if (!isInitialized || !routeSessionId) return;
+
     const syncWithRoute = async () => {
       if (routeSessionId && routeSessionId !== currentSessionId) {
         await changeSession(routeSessionId);
@@ -91,28 +110,9 @@ export function ChatProvider({ children }) {
     };
 
     syncWithRoute();
-  }, [routeSessionId, currentSessionId, changeSession]);
+  }, [isInitialized, routeSessionId, currentSessionId, changeSession]);
 
-  // Chargement initial des sessions
-  useEffect(() => {
-    const initializeChat = async () => {
-      try {
-        await loadSessions();
-        
-        // Si pas de session active et pas de sessions existantes, en créer une
-        if (!currentSessionId && (!sessions || sessions.length === 0)) {
-          await createNewSession();
-        }
-      } catch (error) {
-        console.error('Erreur initialisation chat:', error);
-        setError('Erreur lors de l\'initialisation du chat');
-      }
-    };
-
-    initializeChat();
-  }, []);
-
-  // Effacer les erreurs après un délai
+  // Nettoyage des erreurs
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(null), 5000);
@@ -120,37 +120,21 @@ export function ChatProvider({ children }) {
     }
   }, [error]);
 
-  // Valeur du contexte
   const contextValue = {
-    // État
     messages,
     sessions,
     isLoading,
     error,
     connected,
     currentSessionId,
-    selectedDocuments,
-
-    // Actions
     sendMessage,
     createNewSession,
     changeSession,
     loadSessions,
     setError,
-    setSelectedDocuments,
     sendSocketMessage,
-
-    // Métadonnées
-    userId: config.CHAT.DEFAULT_USER_ID,
-    language: config.CHAT.DEFAULT_LANGUAGE,
-
-    // État détaillé pour le débogage
-    state: {
-      hasActiveSessions: sessions && sessions.length > 0,
-      messageCount: messages.length,
-      sessionCount: sessions?.length || 0,
-      wsConnected: connected
-    }
+    isInitialized,
+    userId: config.CHAT.DEFAULT_USER_ID
   };
 
   return (
