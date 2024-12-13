@@ -1,5 +1,5 @@
 // src/components/chat/MessageInput.jsx
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { config } from '../../config';
 
@@ -20,7 +20,7 @@ const MessageInput = ({ onSend, isLoading, disabled }) => {
 
   return (
     <div className="border-t dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-      <form onSubmit={handleSubmit} className="flex space-x-4">
+      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex space-x-4">
         <input
           type="text"
           value={message}
@@ -30,7 +30,7 @@ const MessageInput = ({ onSend, isLoading, disabled }) => {
                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                    focus:outline-none focus:ring-2 focus:ring-blue-500
                    disabled:opacity-50 disabled:cursor-not-allowed"
-          placeholder="Votre message..."
+          placeholder={disabled ? "Connexion en cours..." : "Votre message..."}
           disabled={disabled || isLoading}
         />
         <button
