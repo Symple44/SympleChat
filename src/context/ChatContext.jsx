@@ -1,11 +1,6 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext } from 'react';
-import { 
-  createBrowserRouter, 
-  RouterProvider,
-  createRoutesFromElements,
-  Route
-} from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import useSessionNavigation from '../hooks/useSessionNavigation';
 import useWebSocket from '../hooks/useWebSocket';
 import useMessages from '../hooks/useMessages';
@@ -21,7 +16,29 @@ export const useChatContext = () => {
   return context;
 };
 
-export const ChatProvider = ({ children }) => {
+// Configuration du routeur avec tous les future flags
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <App />,
+    children: [
+      {
+        path: 'session/:sessionId',
+        element: <App />
+      }
+    ]
+  }
+], {
+  future: {
+    v7_startTransition: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_fetcherPersist: true,
+    v7_skipActionErrorRevalidation: true
+  }
+});
+
+const ChatProvider = ({ children }) => {
   const sessionNav = useSessionNavigation();
   const { connected } = useWebSocket();
   const { 
@@ -50,22 +67,11 @@ export const ChatProvider = ({ children }) => {
   );
 };
 
-// Création du routeur avec les future flags
-const router = createBrowserRouter(
-  createRoutesFromElements(
-    <Route path="*" element={<App />} />
-  ),
-  {
-    future: {
-      v7_startTransition: true,
-      v7_relativeSplatPath: true
-    }
-  }
-);
-
-export const ChatProviderWithRouter = ({ children }) => (
+export const ChatProviderWithRouter = () => (
   <RouterProvider router={router}>
-    <ChatProvider>{children}</ChatProvider>
+    <ChatProvider>
+      <App />
+    </ChatProvider>
   </RouterProvider>
 );
 
