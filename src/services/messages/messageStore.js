@@ -3,6 +3,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { config } from '../../config';
 
+// Helper pour construire les URLs d'API correctement
+const buildApiUrl = (endpoint) => {
+  return `${config.API.BASE_URL}${endpoint}`;
+};
+
 const useMessageStore = create(
   persist(
     (set, get) => ({
@@ -24,7 +29,10 @@ const useMessageStore = create(
       loadSessions: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch(`${config.API.BASE_URL}/api/history/user/${config.CHAT.DEFAULT_USER_ID}`);
+          const response = await fetch(
+            buildApiUrl(`/history/user/${config.CHAT.DEFAULT_USER_ID}`)
+          );
+          
           if (!response.ok) throw new Error('Erreur chargement historique');
           
           const history = await response.json();
@@ -38,23 +46,19 @@ const useMessageStore = create(
               };
             }
             groups[msg.session_id].messages.push(msg);
-            // Mettre à jour le timestamp si plus récent
             if (new Date(msg.timestamp) > new Date(groups[msg.session_id].timestamp)) {
               groups[msg.session_id].timestamp = msg.timestamp;
             }
             return groups;
           }, {});
 
-          // Convertir en tableau de sessions
           const sessions = Object.entries(sessionGroups).map(([sessionId, data]) => ({
             session_id: sessionId,
             timestamp: data.timestamp,
             first_message: data.messages.find(m => m.query)?.query || "Nouvelle conversation"
           }));
 
-          // Trier par date décroissante
           sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          
           set({ sessions });
         } catch (error) {
           console.error('Erreur chargement sessions:', error);
@@ -67,11 +71,14 @@ const useMessageStore = create(
       createNewSession: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch(`${config.API.BASE_URL}/api/sessions/new`, {
-            method: 'POST',
-            headers: config.API.HEADERS,
-            body: JSON.stringify({ user_id: config.CHAT.DEFAULT_USER_ID })
-          });
+          const response = await fetch(
+            buildApiUrl('/sessions/new'), 
+            {
+              method: 'POST',
+              headers: config.API.HEADERS,
+              body: JSON.stringify({ user_id: config.CHAT.DEFAULT_USER_ID })
+            }
+          );
 
           if (!response.ok) throw new Error('Erreur création session');
           
@@ -101,7 +108,10 @@ const useMessageStore = create(
       loadSessionMessages: async (sessionId) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch(`${config.API.BASE_URL}/api/history/session/${sessionId}`);
+          const response = await fetch(
+            buildApiUrl(`/history/session/${sessionId}`)
+          );
+          
           if (!response.ok) throw new Error('Erreur chargement messages');
           
           const messages = await response.json();
@@ -143,16 +153,19 @@ const useMessageStore = create(
           }));
 
           // Envoi au serveur
-          const response = await fetch(`${config.API.BASE_URL}/api/chat`, {
-            method: 'POST',
-            headers: config.API.HEADERS,
-            body: JSON.stringify({
-              user_id: config.CHAT.DEFAULT_USER_ID,
-              query: content,
-              session_id: currentSessionId,
-              language: config.CHAT.DEFAULT_LANGUAGE
-            })
-          });
+          const response = await fetch(
+            buildApiUrl('/chat'),
+            {
+              method: 'POST',
+              headers: config.API.HEADERS,
+              body: JSON.stringify({
+                user_id: config.CHAT.DEFAULT_USER_ID,
+                query: content,
+                session_id: currentSessionId,
+                language: config.CHAT.DEFAULT_LANGUAGE
+              })
+            }
+          );
 
           if (!response.ok) throw new Error('Erreur envoi message');
           
