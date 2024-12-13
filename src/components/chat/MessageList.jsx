@@ -1,5 +1,5 @@
 // src/components/chat/MessageList.jsx
-import { useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Bot } from 'lucide-react';
 import DocumentPreview from './DocumentPreview';
 import DocumentViewer from './DocumentViewer';
