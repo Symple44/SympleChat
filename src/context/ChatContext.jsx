@@ -1,9 +1,9 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext } from 'react';
-import useSessionNavigation from '../hooks/useSessionNavigation';
-import useMessages from '../hooks/useMessages';
-import useWebSocket from '../hooks/useWebSocket';
 import { BrowserRouter as Router } from 'react-router-dom';
+import useSessionNavigation from '../hooks/useSessionNavigation';
+import useWebSocket from '../hooks/useWebSocket';
+import useMessages from '../hooks/useMessages';
 
 const ChatContext = createContext(null);
 
@@ -26,21 +26,14 @@ export const ChatProvider = ({ children }) => {
   } = useMessages(sessionNav.currentSessionId);
 
   const contextValue = {
-    // État des sessions
     sessions: sessionNav.sessions,
     currentSessionId: sessionNav.currentSessionId,
     isLoading: sessionNav.isLoading || messagesLoading,
     error: sessionNav.error || messagesError,
-    
-    // Actions sur les sessions
     changeSession: sessionNav.changeSession,
     createNewSession: sessionNav.createNewSession,
-    
-    // État et actions des messages
     messages,
     sendMessage,
-    
-    // État de la connexion
     connected
   };
 
@@ -51,7 +44,6 @@ export const ChatProvider = ({ children }) => {
   );
 };
 
-// Wrapper pour fournir le Router
 export const ChatProviderWithRouter = ({ children }) => (
   <Router>
     <ChatProvider>{children}</ChatProvider>
