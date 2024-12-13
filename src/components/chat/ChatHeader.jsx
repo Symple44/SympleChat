@@ -1,21 +1,29 @@
 // src/components/chat/ChatHeader.jsx
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { MessageCircle, Moon, Sun, Book, BookOpen, Plus } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { config } from '../../config';
 
-const ChatHeader = ({ connected, currentSessionId, sessions, onSelectSession, onNewSession }) => {
+const ChatHeader = ({ connected, sessionId, sessions, onSelectSession, onNewSession }) => {
   const { isDark, toggleTheme } = useTheme();
   const [showSessions, setShowSessions] = useState(false);
 
-  const handleSessionSelect = (sessionId) => {
-    onSelectSession(sessionId);
-    setShowSessions(false);
+  const handleNewSession = async () => {
+    try {
+      await onNewSession();
+      setShowSessions(false);
+    } catch (error) {
+      console.error('Erreur création nouvelle session:', error);
+    }
   };
 
-  const handleNewSession = async () => {
-    await onNewSession();
-    setShowSessions(false);
+  const handleSessionSelect = async (sid) => {
+    try {
+      await onSelectSession(sid);
+      setShowSessions(false);
+    } catch (error) {
+      console.error('Erreur sélection session:', error);
+    }
   };
 
   return (
@@ -37,7 +45,7 @@ const ChatHeader = ({ connected, currentSessionId, sessions, onSelectSession, on
           <div className="flex items-center space-x-2">
             <MessageCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {config.APP.NAME}
+              Assistant {config.APP.NAME}
             </h1>
           </div>
         </div>
@@ -64,11 +72,12 @@ const ChatHeader = ({ connected, currentSessionId, sessions, onSelectSession, on
         </div>
       </div>
 
-      {showSessions && sessions && sessions.length > 0 && (
+      {/* Liste des sessions */}
+      {showSessions && (
         <div className="absolute left-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 shadow-lg rounded-lg border dark:border-gray-700 max-h-[70vh] overflow-y-auto z-50">
           <div className="p-3 border-b dark:border-gray-700 flex justify-between items-center">
             <h2 className="font-medium text-gray-900 dark:text-white">
-              Sessions
+              Sessions ouvertes
             </h2>
             <button
               onClick={handleNewSession}
@@ -79,21 +88,33 @@ const ChatHeader = ({ connected, currentSessionId, sessions, onSelectSession, on
             </button>
           </div>
           <div className="divide-y dark:divide-gray-700">
-            {sessions.map((session) => (
-              <div
-                key={session.session_id}
-                onClick={() => handleSessionSelect(session.session_id)}
-                className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer
-                  ${session.session_id === currentSessionId ? 'bg-blue-50 dark:bg-blue-900' : ''}`}
-              >
-                <p className="text-sm text-gray-900 dark:text-white mb-1">
-                  {new Date(session.timestamp).toLocaleString('fr-FR', config.CHAT.DATE_FORMAT_OPTIONS)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                  {session.first_message}
-                </p>
+            {sessions && sessions.length > 0 ? (
+              sessions.map((session) => (
+                <div
+                  key={session.session_id}
+                  onClick={() => handleSessionSelect(session.session_id)}
+                  className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer 
+                    ${session.session_id === sessionId ? 'bg-blue-50 dark:bg-blue-900' : ''}`}
+                >
+                  <p className="text-sm text-gray-900 dark:text-white mb-1">
+                    {new Date(session.timestamp).toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                    {session.first_message}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                Aucune session
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}
