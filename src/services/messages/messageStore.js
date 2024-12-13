@@ -87,28 +87,35 @@ const useMessageStore = create(
         try {
           console.log('Création nouvelle session...');
           
-          const data = await apiCall('/sessions/new', {
+          const response = await apiCall('/sessions/new', {
             method: 'POST',
             body: JSON.stringify({
               user_id: config.CHAT.DEFAULT_USER_ID
             })
           });
 
-          console.log('Réponse création session:', data);
+          console.log('Réponse création session:', response);
+
+          if (!response.session_id) {
+            throw new Error('Pas de session_id dans la réponse');
+          }
 
           const newSession = {
-            session_id: data.session_id,
+            session_id: response.session_id,
             timestamp: new Date().toISOString(),
             first_message: "Nouvelle conversation"
           };
           
-          set(state => ({
-            sessions: [newSession, ...state.sessions],
-            currentSessionId: data.session_id,
+          // Important: On met à jour d'abord currentSessionId
+          set({
+            sessions: [newSession, ...get().sessions],
+            currentSessionId: newSession.session_id,
             messages: []
-          }));
+          });
           
-          return data.session_id;
+          console.log('Nouvelle session créée avec ID:', newSession.session_id);
+          
+          return newSession.session_id;
         } catch (error) {
           console.error('Erreur création session:', error);
           set({ error: error.message });
