@@ -1,9 +1,15 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { 
+  createBrowserRouter, 
+  RouterProvider,
+  createRoutesFromElements,
+  Route
+} from 'react-router-dom';
 import useSessionNavigation from '../hooks/useSessionNavigation';
 import useWebSocket from '../hooks/useWebSocket';
 import useMessages from '../hooks/useMessages';
+import App from '../App';
 
 const ChatContext = createContext(null);
 
@@ -44,10 +50,23 @@ export const ChatProvider = ({ children }) => {
   );
 };
 
+// Création du routeur avec les future flags
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route path="*" element={<App />} />
+  ),
+  {
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true
+    }
+  }
+);
+
 export const ChatProviderWithRouter = ({ children }) => (
-  <Router>
+  <RouterProvider router={router}>
     <ChatProvider>{children}</ChatProvider>
-  </Router>
+  </RouterProvider>
 );
 
 export default ChatContext;
