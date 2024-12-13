@@ -67,29 +67,6 @@ const AppWithProviders = () => {
   );
 };
 
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <AppWithProviders />,
-    children: [
-      {
-        path: 'session/:sessionId',
-        element: <AppWithProviders />
-      }
-    ]
-  }
-], {
-  future: {
-    v7_startTransition: true,
-    v7_normalizeFormMethod: true,
-    v7_partialHydration: true,
-    v7_fetcherPersist: true,
-    v7_relativeSplatPath: true,
-    v7_prependBasename: true,
-    v7_skipActionErrorRevalidation: true
-  }
-});
-
 const router = createAppRouter(routes);
 
 export const ChatProviderWithRouter = () => (
