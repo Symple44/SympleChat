@@ -42,7 +42,7 @@ const useMessageStore = create(
       
       // Gestion des sessions
       loadSessions: async () => {
-        // Ajout d'un verrou pour éviter les appels multiples
+        // Verrou pour éviter les appels multiples
         if (get().isLoading) return get().sessions;
 
         set({ isLoading: true, error: null });
@@ -51,28 +51,44 @@ const useMessageStore = create(
             `/history/user/${config.CHAT.DEFAULT_USER_ID}`
           );
           
-          const sessionGroups = history.reduce((groups, msg) => {
-            if (!groups[msg.session_id]) {
-              groups[msg.session_id] = {
-                messages: [],
+          // Utiliser un Map pour un suivi plus précis des sessions
+          const sessionMap = new Map();
+          
+          // Traiter chaque message pour construire les sessions
+          history.forEach(msg => {
+            if (!sessionMap.has(msg.session_id)) {
+              sessionMap.set(msg.session_id, {
+                session_id: msg.session_id,
                 timestamp: msg.timestamp,
-                session_id: msg.session_id
-              };
+                messages: [],
+                first_message: null
+              });
             }
-            groups[msg.session_id].messages.push(msg);
             
-            if (new Date(msg.timestamp) > new Date(groups[msg.session_id].timestamp)) {
-              groups[msg.session_id].timestamp = msg.timestamp;
+            const sessionData = sessionMap.get(msg.session_id);
+            sessionData.messages.push(msg);
+            
+            // Mettre à jour le timestamp le plus récent
+            if (!sessionData.timestamp || 
+                new Date(msg.timestamp) > new Date(sessionData.timestamp)) {
+              sessionData.timestamp = msg.timestamp;
             }
-            return groups;
-          }, {});
-
-          const sessions = Object.values(sessionGroups).map(group => ({
-            session_id: group.session_id,
-            timestamp: group.timestamp,
-            first_message: group.messages.find(m => m.query)?.query || "Nouvelle conversation"
+            
+            // Définir le premier message si pas encore défini
+            if (!sessionData.first_message && msg.query) {
+              sessionData.first_message = msg.query;
+            }
+          });
+          
+          // Convertir la Map en tableau de sessions
+          const sessions = Array.from(sessionMap.values()).map(session => ({
+            session_id: session.session_id,
+            timestamp: session.timestamp,
+            first_message: session.first_message || "Nouvelle conversation",
+            message_count: session.messages.length
           }));
 
+          // Trier par timestamp le plus récent
           sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
           
           set({ 
@@ -219,7 +235,6 @@ const useMessageStore = create(
             isLoading: false
           }));
 
-          // MODIFICATION IMPORTANTE : Supprimer l'appel à loadSessions()
           return responseData;
         } catch (error) {
           console.error('Erreur envoi message:', error);
