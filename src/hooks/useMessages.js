@@ -3,14 +3,28 @@ import { useState, useEffect } from 'react';
 import { config } from '../config';
 
 const formatMessage = (message) => {
+  // Si c'est un message de l'historique
+  if (message.query || message.response) {
+    return {
+      id: message.id || Date.now(),
+      content: message.query || message.response,
+      type: message.query ? 'user' : 'assistant',
+      timestamp: message.timestamp || new Date().toISOString(),
+      documents: message.documents_used || [],
+      fragments: message.fragments || [],
+      confidence: message.confidence_score
+    };
+  }
+  
+  // Si c'est un nouveau message
   return {
     id: message.id || Date.now(),
-    content: message.query || message.response || message.content,
-    type: message.query ? 'user' : 'assistant',
+    content: message.content,
+    type: message.type,
     timestamp: message.timestamp || new Date().toISOString(),
-    documents: message.documents_used || [],
+    documents: message.documents || [],
     fragments: message.fragments || [],
-    confidence: message.confidence_score
+    confidence: message.confidence
   };
 };
 
@@ -32,7 +46,8 @@ export const useMessages = (sessionId) => {
         if (!response.ok) throw new Error('Erreur chargement messages');
         
         const data = await response.json();
-        setMessages(data.map(formatMessage));
+        const formattedMessages = data.map(formatMessage);
+        setMessages(formattedMessages);
       } catch (err) {
         console.error('Erreur chargement messages:', err);
         setError(err.message);
@@ -50,7 +65,7 @@ export const useMessages = (sessionId) => {
     try {
       setIsLoading(true);
       
-      // Ajout du message utilisateur
+      // Ajouter le message de l'utilisateur immédiatement
       const userMessage = formatMessage({
         content,
         type: 'user',
@@ -58,7 +73,7 @@ export const useMessages = (sessionId) => {
       });
       setMessages(prev => [...prev, userMessage]);
 
-      // Envoi au serveur
+      // Envoyer au serveur
       const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.CHAT}`, {
         method: 'POST',
         headers: config.API.HEADERS,
@@ -73,14 +88,19 @@ export const useMessages = (sessionId) => {
       if (!response.ok) throw new Error('Erreur envoi message');
       
       const data = await response.json();
-      setMessages(prev => [...prev, formatMessage({
+      
+      // Ajouter la réponse de l'assistant
+      const assistantMessage = formatMessage({
         content: data.response,
         type: 'assistant',
         documents: data.documents_used,
         fragments: data.fragments,
         confidence: data.confidence_score,
         timestamp: new Date().toISOString()
-      })]);
+      });
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      
     } catch (err) {
       console.error('Erreur envoi message:', err);
       setError(err.message);
