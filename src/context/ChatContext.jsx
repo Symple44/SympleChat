@@ -2,7 +2,6 @@
 import { createContext, useContext } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { createAppRouter } from '../config/router';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import ChatContainer from '../components/chat/ChatContainer';
 import useSessionNavigation from '../hooks/useSessionNavigation';
 import useWebSocket from '../hooks/useWebSocket';
