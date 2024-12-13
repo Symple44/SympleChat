@@ -1,19 +1,22 @@
 // src/config/index.js
 const isDev = import.meta.env.MODE === 'development';
+const apiBase = isDev ? import.meta.env.VITE_API_URL || 'http://192.168.0.15:8000' : '';
 
-// En production, on utilise des chemins relatifs
-const API_BASE = isDev ? 'http://192.168.0.15:8000' : '';
-const WS_BASE = isDev ? 'ws://192.168.0.15:8000' : 'ws://' + window.location.host;
+// Construction de l'URL WebSocket en fonction de l'environnement
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsBase = isDev 
+  ? `${wsProtocol}//${import.meta.env.VITE_WS_HOST || '192.168.0.15:8000'}`
+  : `${wsProtocol}//${window.location.host}`;
 
 export const config = {
   APP: {
     NAME: "Eurêka Solutions",
     TITLE_SUFFIX: "Chat",
-    SHOW_DOCUMENT_IMAGES: false //Afichage des images dans les documents récupérés
+    SHOW_DOCUMENT_IMAGES: false
   },
   API: {
-    BASE_URL: `${API_BASE}/api`,
-    WS_URL: `${WS_BASE}/ws`,
+    BASE_URL: `${apiBase}/api`,
+    WS_URL: `${wsBase}/ws`,
     ENDPOINTS: {
       CHAT: '/chat',
       SESSIONS: '/sessions',
