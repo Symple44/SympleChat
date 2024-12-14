@@ -42,76 +42,61 @@ const useMessageStore = create(
       
       // Gestion des sessions
       loadSessions: async () => {
-        // Verrou pour éviter les appels multiples
-        if (get().isLoading) return get().sessions;
+  if (get().isLoading) return get().sessions;
 
-        set({ isLoading: true, error: null });
-        try {
-          const history = await apiCall(
-            `/history/user/${config.CHAT.DEFAULT_USER_ID}`
-            );
-
-            console.log('Raw history:', history);
-            console.log('Nombre de messages:', history.length);
-          
-          
-          // Utiliser un Map pour un suivi plus précis des sessions
-          const sessionMap = new Map();
-          
-          // Traiter chaque message pour construire les sessions
-          history.forEach(msg => {
-            if (!sessionMap.has(msg.session_id)) {
-              sessionMap.set(msg.session_id, {
-                session_id: msg.session_id,
-                timestamp: msg.timestamp,
-                messages: [],
-                first_message: null
-              });
-            }
-            
-            const sessionData = sessionMap.get(msg.session_id);
-            sessionData.messages.push(msg);
-            
-            // Mettre à jour le timestamp le plus récent
-            if (!sessionData.timestamp || 
-                new Date(msg.timestamp) > new Date(sessionData.timestamp)) {
-              sessionData.timestamp = msg.timestamp;
-            }
-            
-            // Définir le premier message si pas encore défini
-            if (!sessionData.first_message && msg.query) {
-              sessionData.first_message = msg.query;
-            }
-          });
-          
-          // Convertir la Map en tableau de sessions
-          const sessions = Array.from(sessionMap.values()).map(session => ({
-            session_id: session.session_id,
-            timestamp: session.timestamp,
-            first_message: session.first_message || "Nouvelle conversation",
-            message_count: session.messages.length
-          }));
-
-          // Trier par timestamp le plus récent
-          sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          
-          set({ 
-            sessions, 
-            isLoading: false 
-          });
-          
-          console.log('Sessions chargées:', sessions);
-          return sessions;
-
-        } catch (error) {
-          console.error('Erreur chargement sessions:', error);
-          set({ 
-            error: error.message, 
-            isLoading: false 
-          });
-          return [];
+  set({ isLoading: true, error: null });
+  try {
+    const history = await apiCall(
+      `/history/user/${config.CHAT.DEFAULT_USER_ID}?limit=100`
+    );
+    
+    // Utiliser un Map pour tracker les sessions uniques
+    const sessionMap = new Map();
+    
+    history.forEach(msg => {
+      if (!sessionMap.has(msg.session_id)) {
+        sessionMap.set(msg.session_id, {
+          session_id: msg.session_id,
+          timestamp: msg.timestamp,
+          first_message: msg.query || "Nouvelle conversation",
+          message_count: 1
+        });
+      } else {
+        const session = sessionMap.get(msg.session_id);
+        // Mettre à jour le timestamp si plus récent
+        if (new Date(msg.timestamp) > new Date(session.timestamp)) {
+          session.timestamp = msg.timestamp;
         }
-      },
+        session.message_count++;
+      }
+    });
+
+    // Convertir la Map en tableau de sessions
+    const sessions = Array.from(sessionMap.values()).map(session => ({
+      ...session,
+      first_message: session.first_message || "Nouvelle conversation"
+    }));
+
+    // Trier par timestamp le plus récent
+    sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    set({ 
+      sessions, 
+      isLoading: false 
+    });
+    
+    console.log('Sessions chargées:', sessions);
+    return sessions;
+
+  } catch (error) {
+    console.error('Erreur chargement sessions:', error);
+    set({ 
+      error: error.message, 
+      isLoading: false 
+    });
+    return [];
+  }
+},
 
       createNewSession: async () => {
         // Verrou pour éviter les créations multiples
