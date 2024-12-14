@@ -1,59 +1,39 @@
 // src/hooks/useChat.js
-import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
-import { useMessages } from './useMessages';
+import { useSessionManager } from './useSessionManager';
+import useMessageStore from '../services/messages/messageStore';
 
 export default function useChat() {
   const [error, setError] = useState(null);
   const { connected, sendSocketMessage } = useWebSocket();
-  const { messages, sendMessage, isLoading, sessionId, createNewSession, changeSession } = useMessages();
-  const { sessionId: routeSessionId } = useParams();
-
-  // Synchroniser avec l'ID de session de l'URL si présent
-  useEffect(() => {
-    const syncSession = async () => {
-      if (routeSessionId && routeSessionId !== sessionId) {
-        try {
-          await changeSession(routeSessionId);
-        } catch (err) {
-          console.error('Erreur synchronisation session:', err);
-          setError('Session invalide ou expirée');
-        }
-      }
-    };
-
-    syncSession();
-  }, [routeSessionId, sessionId, changeSession]);
+  const messageStore = useMessageStore();
+  const { currentSession, createNewSession } = useSessionManager();
 
   const handleSendMessage = useCallback(async (content) => {
     try {
-      if (!sessionId) {
-        // Créer une nouvelle session si nécessaire
+      if (!currentSession) {
         await createNewSession();
       }
-      await sendMessage(content);
+      
+      if (!currentSession?.session_id) {
+        throw new Error('Pas de session active');
+      }
+
+      await messageStore.sendMessage(content, currentSession.session_id);
     } catch (err) {
       setError('Erreur lors de l\'envoi du message');
+      console.error('Erreur envoi message:', err);
     }
-  }, [sessionId, createNewSession, sendMessage]);
-
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
+  }, [currentSession, createNewSession]);
 
   return {
-    messages,
-    isLoading,
-    error,
+    messages: messageStore.messages,
+    isLoading: messageStore.isLoading,
+    error: error || messageStore.error,
     connected,
-    sessionId,
+    sessionId: currentSession?.session_id,
     sendMessage: handleSendMessage,
-    sendSocketMessage,
-    createNewSession,
-    changeSession
+    sendSocketMessage
   };
 }
