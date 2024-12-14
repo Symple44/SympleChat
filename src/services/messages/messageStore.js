@@ -58,51 +58,37 @@ const useMessageStore = create(
           console.log('Historique reçu:', history);
           console.log('Nombre total de messages:', history.length);
 
-          // Utiliser un Map pour tracker les sessions uniques
-          const sessionMap = new Map();
-          
-          history.forEach(msg => {
-            console.log('Traitement message:', msg.session_id);
-            
-            if (!sessionMap.has(msg.session_id)) {
-              sessionMap.set(msg.session_id, {
-                session_id: msg.session_id,
-                timestamp: msg.timestamp,
-                first_message: msg.query || "Nouvelle conversation",
-                message_count: 1,
-                messages: [msg]  // Stocker tous les messages de la session
-              });
-            } else {
-              const session = sessionMap.get(msg.session_id);
-              
-              // Mettre à jour le timestamp si plus récent
-              if (new Date(msg.timestamp) > new Date(session.timestamp)) {
-                session.timestamp = msg.timestamp;
-              }
-              
-              // Incrémenter le compteur
-              session.message_count++;
-              
-              // Ajouter le message à la liste des messages de la session
-              session.messages.push(msg);
-              
-              // Garder le premier message si pas encore défini
-              if (!session.first_message && msg.query) {
-                session.first_message = msg.query;
-              }
-            }
-          });
+          // Extraire les sessions uniques par un autre moyen
+    const sessionMap = history.reduce((acc, msg) => {
+      // Si pas de session_id, générer un identifiant unique
+      const sessionKey = msg.additional_data?.session_id || msg.id;
+      
+      if (!acc[sessionKey]) {
+        acc[sessionKey] = {
+          session_id: sessionKey,
+          timestamp: msg.timestamp,
+          messages: [msg],
+          first_message: msg.query || "Nouvelle conversation"
+        };
+      } else {
+        acc[sessionKey].messages.push(msg);
+        // Mettre à jour le timestamp si plus récent
+        if (new Date(msg.timestamp) > new Date(acc[sessionKey].timestamp)) {
+          acc[sessionKey].timestamp = msg.timestamp;
+        }
+      }
+      
+      return acc;
+    }, {});
 
-          // Convertir la Map en tableau de sessions
-          const sessions = Array.from(sessionMap.values()).map(session => ({
-            session_id: session.session_id,
-            timestamp: session.timestamp,
-            first_message: session.first_message || "Nouvelle conversation",
-            message_count: session.message_count
-          }));
+    const sessions = Object.values(sessionMap).map(session => ({
+      session_id: session.session_id,
+      timestamp: session.timestamp,
+      first_message: session.first_message,
+      message_count: session.messages.length
+    }));
 
-          // Trier par timestamp le plus récent
-          sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
           
           console.log('Sessions extraites:', sessions);
           console.log('Nombre de sessions:', sessions.length);
