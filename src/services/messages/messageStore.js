@@ -49,10 +49,11 @@ const useMessageStore = create(
         try {
           const history = await apiCall(
             `/history/user/${config.CHAT.DEFAULT_USER_ID}`
+            );
 
             console.log('Raw history:', history);
             console.log('Nombre de messages:', history.length);
-          );
+          
           
           // Utiliser un Map pour un suivi plus précis des sessions
           const sessionMap = new Map();
