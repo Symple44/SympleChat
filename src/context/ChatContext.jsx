@@ -128,6 +128,7 @@ export function ChatProvider({ children }) {
 
   // Gestion de la route
   useEffect(() => {
+    console.log('Sessions dans ChatContext:', sessions);
     const syncWithRoute = async () => {
       // Conditions pour éviter les appels superflus
       if (!isInitialized || 
