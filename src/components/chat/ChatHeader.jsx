@@ -1,45 +1,77 @@
 // src/components/chat/ChatHeader.jsx
-import React, { useState } from 'react';
-import { MessageCircle, Moon, Sun, Book, BookOpen, Plus } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, Moon, Sun, Book, BookOpen, Plus, X } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useSessionManager } from '../../hooks/useSessionManager';
 import { config } from '../../config';
 
-const ChatHeader = ({ connected, sessionId, sessions, onSelectSession, onNewSession }) => {
+const useOutsideClick = (callback) => {
+  const ref = useRef();
+
+  useEffect(() => {
+    const handleClick = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        callback();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [callback]);
+
+  return ref;
+};
+
+const ChatHeader = ({ connected }) => {
   const { isDark, toggleTheme } = useTheme();
   const [showSessions, setShowSessions] = useState(false);
+  const menuRef = useOutsideClick(() => setShowSessions(false));
+  
+  const {
+    sessions,
+    currentSession,
+    isLoading,
+    createNewSession,
+    changeSession
+  } = useSessionManager();
 
   const handleNewSession = async () => {
     try {
-      const newSessionId = await onNewSession();
+      const newSessionId = await createNewSession();
       if (newSessionId) {
         console.log('Nouvelle session créée:', newSessionId);
         setShowSessions(false);
-      } else {
-        console.error('Pas de sessionId retourné par createNewSession');
       }
     } catch (error) {
-      console.error('Erreur lors de la création de session:', error);
+      console.error('Erreur création session:', error);
     }
   };
 
   const handleSessionSelect = async (sid) => {
-    if (!sid) {
-      console.error('Tentative de sélection de session sans ID');
-      return;
-    }
+    if (!sid) return;
+    
     try {
-      await onSelectSession(sid);
+      await changeSession(sid);
       setShowSessions(false);
-      console.log('Session sélectionnée:', sid);
     } catch (error) {
-      console.error('Erreur lors de la sélection de la session:', error);
+      console.error('Erreur sélection session:', error);
     }
   };
 
+  const formatDate = (timestamp) => {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(timestamp));
+  };
 
   return (
     <header className="relative bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3">
       <div className="flex items-center justify-between">
+        {/* Bouton sessions + titre */}
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setShowSessions(!showSessions)}
@@ -61,6 +93,7 @@ const ChatHeader = ({ connected, sessionId, sessions, onSelectSession, onNewSess
           </div>
         </div>
         
+        {/* Statut connexion + thème */}
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${
@@ -83,38 +116,41 @@ const ChatHeader = ({ connected, sessionId, sessions, onSelectSession, onNewSess
         </div>
       </div>
 
-      {/* Liste des sessions */}
+      {/* Menu des sessions */}
       {showSessions && (
-        <div className="absolute left-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 shadow-lg rounded-lg border dark:border-gray-700 max-h-[70vh] overflow-y-auto z-50">
+        <div 
+          ref={menuRef}
+          className="absolute left-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 shadow-lg rounded-lg border dark:border-gray-700 max-h-[70vh] overflow-y-auto z-50"
+        >
           <div className="p-3 border-b dark:border-gray-700 flex justify-between items-center">
             <h2 className="font-medium text-gray-900 dark:text-white">
-              Sessions ouvertes
+              Sessions
             </h2>
             <button
               onClick={handleNewSession}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              disabled={isLoading}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
               title="Nouvelle session"
             >
-              <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              {isLoading ? (
+                <span className="animate-spin">⟳</span>
+              ) : (
+                <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              )}
             </button>
           </div>
+
           <div className="divide-y dark:divide-gray-700">
             {sessions && sessions.length > 0 ? (
               sessions.map((session) => (
                 <div
                   key={session.session_id}
                   onClick={() => handleSessionSelect(session.session_id)}
-                  className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer 
-                    ${session.session_id === sessionId ? 'bg-blue-50 dark:bg-blue-900' : ''}`}
+                  className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer
+                    ${session.session_id === currentSession?.session_id ? 'bg-blue-50 dark:bg-blue-900' : ''}`}
                 >
                   <p className="text-sm text-gray-900 dark:text-white mb-1">
-                    {new Date(session.timestamp).toLocaleString('fr-FR', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDate(session.timestamp)}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                     {session.first_message}
