@@ -1,116 +1,64 @@
+// src/hooks/useMessages.js
 import { useCallback, useEffect } from 'react';
 import useMessageStore from '../services/messages/messageStore';
+import { useSessionManager } from './useSessionManager';
 
 export const useMessages = () => {
-  const store = useMessageStore();
-  
-  const loadSessions = useCallback(async () => {
-    try {
-      await store.loadSessions();
-    } catch (error) {
-      console.error('Erreur lors du chargement des sessions:', error);
-    }
-  }, []);
+  const messageStore = useMessageStore();
+  const { 
+    currentSession,
+    sessions,
+    isLoading: sessionsLoading,
+    loadSessions,
+    createNewSession,
+    changeSession 
+  } = useSessionManager();
 
   const sendMessage = useCallback(async (content) => {
-    if (!content.trim() || store.isLoading) return;
+    if (!content.trim() || messageStore.isLoading) return;
     
     try {
-      await store.sendMessage(content);
+      if (!currentSession) {
+        await createNewSession();
+      }
+      
+      await messageStore.sendMessage(content, currentSession?.session_id);
     } catch (error) {
       console.error('Erreur envoi message:', error);
       throw error;
     }
-  }, [store.isLoading, store.sendMessage]);
+  }, [currentSession, createNewSession, messageStore.isLoading]);
 
-  const changeSession = useCallback(async (sessionId) => {
-    if (sessionId === store.currentSessionId) return;
-    try {
-      store.clearMessages();
-      await store.loadSessionMessages(sessionId);
-    } catch (error) {
-      console.error('Erreur changement session:', error);
-      throw error;
+  // Chargement des messages quand la session change
+  useEffect(() => {
+    if (currentSession?.session_id) {
+      messageStore.loadSessionMessages(currentSession.session_id);
+    } else {
+      messageStore.clearMessages();
     }
-  }, [store.currentSessionId]);
-
-  const createNewSession = useCallback(async () => {
-    try {
-      console.log('Création d\'une nouvelle session...');
-      const sessionId = await store.createNewSession();
-      
-      if (!sessionId) {
-        throw new Error('Pas de sessionId retourné');
-      }
-      
-      console.log('Nouvelle session créée:', sessionId);
-      return sessionId;
-    } catch (error) {
-      console.error('Erreur création session:', error);
-      throw error;
-    }
-  }, [store]);
-
-  const clearSessionHistory = useCallback(async () => {
-    try {
-      store.clearMessages();
-    } catch (error) {
-      console.error('Erreur nettoyage historique:', error);
-    }
-  }, []);
+  }, [currentSession?.session_id]);
 
   // Chargement initial des sessions
   useEffect(() => {
-    const initializeChat = async () => {
-      try {
-        console.log('Initialisation du chat...');
-        await store.loadSessions();
-        
-        // Si pas de session active et pas de sessions existantes, en créer une
-        if (!store.currentSessionId && (!store.sessions || store.sessions.length === 0)) {
-          console.log('Création d\'une session initiale...');
-          await createNewSession();
-        }
-      } catch (error) {
-        console.error('Erreur initialisation:', error);
-      }
-    };
-
-    initializeChat();
+    loadSessions();
   }, []);
 
-  // Recharger les sessions quand le sessionId change
-  useEffect(() => {
-    if (store.currentSessionId) {
-      loadSessions();
-    }
-  }, [store.currentSessionId]);
-
   return {
-    // État des messages et sessions
-    messages: store.messages,
-    sessions: store.sessions,
-    isLoading: store.isLoading,
-    error: store.error,
-    sessionId: store.currentSessionId,
+    // État des messages
+    messages: messageStore.messages,
+    isLoading: messageStore.isLoading || sessionsLoading,
+    error: messageStore.error,
+    
+    // État des sessions
+    sessions,
+    sessionId: currentSession?.session_id,
 
-    // Actions sur les messages
+    // Actions
     sendMessage,
-    clearSessionHistory,
-
-    // Actions sur les sessions
-    changeSession,
     createNewSession,
-    changeSession: store.loadSessionMessages,
-    loadSessions: store.loadSessions,
-
-    // État détaillé pour le débogage
-    state: {
-      hasActiveSessions: store.sessions && store.sessions.length > 0,
-      activeSessionId: store.currentSessionId,
-      messageCount: store.messages.length,
-      sessionCount: store.sessions?.length || 0
-    }
+    changeSession,
+    clearMessages: messageStore.clearMessages,
+    loadSessions
   };
 };
 
