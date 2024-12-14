@@ -1,61 +1,52 @@
 /opt/symple-chat/
-├── dist/                      # Dossier de build (généré)
-├── node_modules/             # Dépendances Node.js
-├── public/                   # Fichiers statiques
-│   └── vite.svg
-│
+├── dist/                      # Dossier de build production (généré par Vite)
+├── node_modules/             # Dépendances du projet
+├── public/                   # Fichiers statiques servis directement
+│   └── vite.svg             # Logo Vite pour la page d'exemple
 ├── src/
+│   ├── App.jsx              # Composant racine de l'application
 │   ├── components/
-│   │   ├── common/          # Composants réutilisables
-│   │   │   ├── Button.jsx   # Boutons standards
-│   │   │   └── Input.jsx    # Champs de saisie standards
-│   │   │
 │   │   └── chat/           # Composants spécifiques au chat
-│   │       ├── ChatContainer.jsx      # Container principal
+│   │       ├── ChatContainer.jsx      # Conteneur principal du chat
 │   │       ├── ChatHeader.jsx         # En-tête avec gestion des sessions
-│   │       ├── MessageList.jsx        # Liste des messages avec thème
+│   │       ├── DocumentPreview.jsx    # Aperçu miniature des documents
+│   │       ├── DocumentViewer.jsx     # Visualisation détaillée des documents
+│   │       ├── InstructionViewer.jsx  # Affichage des instructions/procédures
 │   │       ├── MessageInput.jsx       # Zone de saisie des messages
-│   │       ├── DocumentViewer.jsx     # Visualisation des documents
-│   │       └── DocumentPreview.jsx    # Aperçu des documents
-│   │
-│   ├── config/             # Configuration
-│   │   ├── index.js        # Configuration centralisée (API, WebSocket, etc.)
-│   │   └── router.js       # Configuration du routage
-│   │
-│   ├── context/           # Contextes React
-│   │   ├── ChatContext.jsx  # Contexte pour le chat
-│   │   └── ThemeContext.jsx # Gestion thème clair/sombre
-│   │
-│   ├── hooks/             # Hooks personnalisés
-│   │   ├── useChat.js       # Hook principal du chat
-│   │   ├── useMessages.js   # Gestion des messages
-│   │   ├── useSession.js    # Gestion des sessions
-│   │   └── useWebSocket.js  # Connexion WebSocket
-│   │
-│   ├── services/          # Services
-│   │   ├── api.js           # Client API unifié
-│   │   ├── chatService.js   # Service de chat
-│   │   └── client.js        # Client API spécifique
-│   │
-│   ├── styles/           # Styles
-│   │   └── main.css      # Styles globaux et Tailwind
-│   │
-│   ├── utils/            # Utilitaires
-│   │   ├── dateFormatter.js    # Formatage des dates
-│   │   ├── messageParser.js    # Parsing des messages
-│   │   └── pageTitle.js        # Gestion du titre de page
-│   │
-│   ├── App.jsx           # Composant racine
-│   └── main.jsx         # Point d'entrée
-│
-├── .gitignore           # Fichiers ignorés par Git
-├── eslint.config.js     # Configuration ESLint
-├── index.html          # HTML racine
-├── package.json        # Configuration npm et dépendances
-├── postcss.config.js   # Configuration PostCSS
-├── README.md          # Documentation
-├── serve.json         # Configuration du serveur de production
-├── tailwind.config.js # Configuration Tailwind
-├── update.sh          # Script de mise à jour
-├── vercel.json        # Configuration Vercel
-└── vite.config.js     # Configuration Vite
+│   │       ├── MessageItem.jsx        # Composant d'un message individuel
+│   │       ├── MessageList.jsx        # Liste des messages du chat
+│   │       └── SessionList.jsx        # Liste des sessions de chat
+│   ├── config/
+│   │   └── index.js         # Configuration globale (API, constantes, etc.)
+│   ├── context/
+│   │   ├── ChatContext.jsx  # Contexte React pour l'état global du chat
+│   │   └── ThemeContext.jsx # Contexte pour le thème clair/sombre
+│   ├── hooks/
+│   │   ├── useChat.js       # Hook principal pour la logique du chat
+│   │   ├── useMessages.js   # Hook pour la gestion des messages
+│   │   ├── useSession.js    # Hook pour la gestion des sessions
+│   │   └── useWebSocket.js  # Hook pour la connexion WebSocket
+│   ├── main.jsx            # Point d'entrée de l'application React
+│   ├── services/
+│   │   └── messages/
+│   │       └── messageStore.js  # Store Zustand pour la gestion d'état
+│   ├── styles/
+│   │   └── main.css        # Styles globaux et imports Tailwind
+│   └── utils/
+│       ├── dateFormatter.js # Formatage des dates et timestamps
+│       ├── messageParser.js # Analyse et formatage des messages
+│       └── pageTitle.js     # Gestion du titre de la page
+├── .env                     # Variables d'environnement (non versionné)
+├── .gitignore              # Configuration des fichiers ignorés par Git
+├── eslint.config.js        # Configuration ESLint
+├── index.html             # Page HTML racine
+├── package.json           # Configuration npm et dépendances
+├── pnpm-lock.yaml        # Verrouillage des versions des dépendances (pnpm)
+├── postcss.config.js     # Configuration PostCSS pour le CSS
+├── README.md            # Documentation du projet
+├── serve.json          # Configuration du serveur de développement
+├── structure           # Description de la structure du projet
+├── tailwind.config.js # Configuration Tailwind CSS
+├── update.sh         # Script de mise à jour du projet
+├── vercel.json      # Configuration pour le déploiement Vercel
+└── vite.config.js   # Configuration de Vite (bundler)
