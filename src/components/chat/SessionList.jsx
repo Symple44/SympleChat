@@ -3,6 +3,8 @@ import React from 'react';
 import { BookOpen, BookClosed } from 'lucide-react';
 
 const SessionList = ({ sessions, onSelectSession, onClose }) => {
+  console.log('Nombre de sessions:', sessions?.length);
+  console.log('Sessions:', sessions);
   return (
     <div className="absolute left-0 top-16 w-64 bg-white dark:bg-gray-800 shadow-lg rounded-r-lg border-r border-t dark:border-gray-700 max-h-[80vh] overflow-y-auto z-50">
       <div className="p-4 border-b dark:border-gray-700">
