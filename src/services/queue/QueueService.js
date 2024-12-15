@@ -1,35 +1,44 @@
 // src/services/queue/QueueService.js
 import { eventBus, EventTypes } from '../events/EventBus';
-import { analytics } from '../analytics/AnalyticsService';
 import { performanceMonitor } from '../performance/PerformanceMonitor';
 
 class QueueService {
   constructor() {
     this.queues = new Map();
-    this.processing = new Set();
     this.priorities = {
       HIGH: 0,
       MEDIUM: 1,
       LOW: 2
     };
+    this.status = {
+      PENDING: 'pending',
+      PROCESSING: 'processing',
+      COMPLETED: 'completed',
+      FAILED: 'failed',
+      RETRYING: 'retrying'
+    };
+    this.maxRetries = 3;
+    this.retryDelays = [1000, 5000, 15000]; // Délais progressifs
   }
 
   createQueue(queueName, options = {}) {
     if (this.queues.has(queueName)) {
-      throw new Error(`Queue ${queueName} exists already`);
+      throw new Error(`Queue ${queueName} already exists`);
     }
 
     this.queues.set(queueName, {
+      name: queueName,
       tasks: [],
-      isProcessing: false,
+      processing: false,
       options: {
         concurrency: options.concurrency || 1,
-        retryAttempts: options.retryAttempts || 3,
-        retryDelay: options.retryDelay || 1000,
+        retryAttempts: options.retryAttempts || this.maxRetries,
         timeout: options.timeout || 30000,
         ...options
       }
     });
+
+    console.log(`Queue ${queueName} created with options:`, options);
   }
 
   async addTask(queueName, task, priority = this.priorities.MEDIUM) {
@@ -44,21 +53,22 @@ class QueueService {
       id: taskId,
       task,
       priority,
+      status: this.status.PENDING,
       attempts: 0,
       added: Date.now(),
-      status: 'pending'
+      timeout: null
     };
 
     queue.tasks.push(taskWrapper);
     queue.tasks.sort((a, b) => a.priority - b.priority);
 
-    analytics.trackEvent('queue', 'task_added', {
+    eventBus.emit(EventTypes.QUEUE.TASK_ADDED, {
       queueName,
       taskId,
       priority
     });
 
-    if (!queue.isProcessing) {
+    if (!queue.processing) {
       this.processQueue(queueName);
     }
 
@@ -67,10 +77,10 @@ class QueueService {
 
   async processQueue(queueName) {
     const queue = this.queues.get(queueName);
-    if (!queue || queue.isProcessing) return;
+    if (!queue || queue.processing) return;
 
-    queue.isProcessing = true;
-
+    queue.processing = true;
+    
     while (queue.tasks.length > 0) {
       const processing = new Set();
       
@@ -82,19 +92,21 @@ class QueueService {
       await Promise.allSettled(Array.from(processing));
     }
 
-    queue.isProcessing = false;
+    queue.processing = false;
   }
 
   async processTask(queueName, taskWrapper) {
     const queue = this.queues.get(queueName);
-    const startTime = performance.now();
+    const perfMark = performanceMonitor.startMeasure(`task_${queueName}`);
 
     try {
-      taskWrapper.status = 'processing';
+      taskWrapper.status = this.status.PROCESSING;
       
       // Ajouter un timeout
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Task timeout')), queue.options.timeout);
+        taskWrapper.timeout = setTimeout(() => {
+          reject(new Error('Task timeout'));
+        }, queue.options.timeout);
       });
 
       // Exécuter la tâche avec timeout
@@ -103,60 +115,50 @@ class QueueService {
         timeoutPromise
       ]);
 
-      taskWrapper.status = 'completed';
-      const duration = performance.now() - startTime;
-      
-      performanceMonitor.trackMetric('task_duration', duration, {
-        queueName,
-        taskId: taskWrapper.id
-      });
+      clearTimeout(taskWrapper.timeout);
+      taskWrapper.status = this.status.COMPLETED;
 
-      eventBus.emit(EventTypes.SYSTEM.INFO, {
-        message: `Task ${taskWrapper.id} completed successfully`,
+      eventBus.emit(EventTypes.QUEUE.TASK_COMPLETED, {
         queueName,
-        duration
+        taskId: taskWrapper.id,
+        duration: performanceMonitor.endMeasure(perfMark)
       });
 
       return result;
 
     } catch (error) {
+      clearTimeout(taskWrapper.timeout);
       taskWrapper.attempts++;
-      taskWrapper.lastError = error;
 
       if (taskWrapper.attempts < queue.options.retryAttempts) {
-        // Remettre la tâche dans la queue avec délai
-        taskWrapper.status = 'retrying';
-        setTimeout(() => {
-          queue.tasks.push(taskWrapper);
-          if (!queue.isProcessing) {
-            this.processQueue(queueName);
-          }
-        }, queue.options.retryDelay * Math.pow(2, taskWrapper.attempts - 1));
-
-        eventBus.emit(EventTypes.SYSTEM.WARNING, {
-          message: `Task ${taskWrapper.id} failed, retrying...`,
+        // Réessayer avec délai
+        taskWrapper.status = this.status.RETRYING;
+        const delay = this.retryDelays[taskWrapper.attempts - 1];
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        queue.tasks.push(taskWrapper);
+        
+        eventBus.emit(EventTypes.QUEUE.TASK_RETRY, {
           queueName,
+          taskId: taskWrapper.id,
           attempt: taskWrapper.attempts,
           error: error.message
         });
 
       } else {
-        taskWrapper.status = 'failed';
+        taskWrapper.status = this.status.FAILED;
         
-        eventBus.emit(EventTypes.SYSTEM.ERROR, {
-          message: `Task ${taskWrapper.id} failed permanently`,
-          queueName,
-          error: error.message
-        });
-
-        analytics.trackError(error, {
+        eventBus.emit(EventTypes.QUEUE.TASK_FAILED, {
           queueName,
           taskId: taskWrapper.id,
+          error: error.message,
           attempts: taskWrapper.attempts
         });
-      }
 
-      throw error;
+        performanceMonitor.endMeasure(perfMark);
+        throw error;
+      }
     }
   }
 
@@ -167,7 +169,7 @@ class QueueService {
     return {
       name: queueName,
       pending: queue.tasks.length,
-      isProcessing: queue.isProcessing,
+      processing: queue.processing,
       tasks: queue.tasks.map(task => ({
         id: task.id,
         status: task.status,
@@ -178,51 +180,21 @@ class QueueService {
     };
   }
 
-  clearQueue(queueName) {
-    const queue = this.queues.get(queueName);
-    if (queue) {
-      queue.tasks = [];
-      queue.isProcessing = false;
-      eventBus.emit(EventTypes.SYSTEM.INFO, {
-        message: `Queue ${queueName} cleared`
-      });
-    }
-  }
-
   pauseQueue(queueName) {
     const queue = this.queues.get(queueName);
     if (queue) {
-      queue.isProcessing = false;
-      eventBus.emit(EventTypes.SYSTEM.INFO, {
-        message: `Queue ${queueName} paused`
-      });
+      queue.processing = false;
+      eventBus.emit(EventTypes.QUEUE.QUEUE_PAUSED, { queueName });
     }
   }
 
   resumeQueue(queueName) {
     const queue = this.queues.get(queueName);
-    if (queue && !queue.isProcessing && queue.tasks.length > 0) {
+    if (queue && !queue.processing && queue.tasks.length > 0) {
       this.processQueue(queueName);
-      eventBus.emit(EventTypes.SYSTEM.INFO, {
-        message: `Queue ${queueName} resumed`
-      });
+      eventBus.emit(EventTypes.QUEUE.QUEUE_RESUMED, { queueName });
     }
   }
-}
 
-export const queueService = new QueueService();
-
-// Créer les queues par défaut
-queueService.createQueue('messages', {
-  concurrency: 1,
-  retryAttempts: 3,
-  timeout: 10000
-});
-
-queueService.createQueue('sync', {
-  concurrency: 2,
-  retryAttempts: 5,
-  timeout: 30000
-});
-
-export default queueService;
+  clearQueue(queueName) {
+    const queue = this.queues.get(queueName);
