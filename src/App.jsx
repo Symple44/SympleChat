@@ -7,7 +7,7 @@ import AppProvider from './providers/AppProvider';
 import ChatContainer from './components/chat/ChatContainer';
 //import LoadingScreen from './components/common/LoadingScreen';
 //import ErrorScreen from './components/common/ErrorScreen';
-import MaintenanceScreen from './components/common/MaintenanceScreen';
+//import MaintenanceScreen from './components/common/MaintenanceScreen';
 import DebugPanel from './components/debug/DebugPanel';
 import { Toast, CommandPalette, KeyboardShortcuts } from './components/common';
 
@@ -39,9 +39,9 @@ const AppContent = () => {
   //}
 
   // Afficher l'écran de maintenance si nécessaire
-  if (stats?.maintenance) {
-    return <MaintenanceScreen details={stats.maintenance} />;
-  }
+  //if (stats?.maintenance) {
+  //  return <MaintenanceScreen details={stats.maintenance} />;
+  //}
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
