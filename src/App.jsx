@@ -5,7 +5,7 @@ import { useAppService } from './hooks/useAppService';
 import { performanceMonitor } from './services/performance/PerformanceMonitor';
 import AppProvider from './providers/AppProvider';
 import ChatContainer from './components/chat/ChatContainer';
-import LoadingScreen from './components/common/LoadingScreen';
+//import LoadingScreen from './components/common/LoadingScreen';
 import ErrorScreen from './components/common/ErrorScreen';
 import MaintenanceScreen from './components/common/MaintenanceScreen';
 import DebugPanel from './components/debug/DebugPanel';
@@ -29,9 +29,9 @@ const AppContent = () => {
   }, []);
 
   // Afficher l'écran de chargement pendant l'initialisation
-  if (!isInitialized) {
-    return <LoadingScreen message="Initialisation de l'application..." />;
-  }
+ // if (!isInitialized) {
+ //   return <LoadingScreen message="Initialisation de l'application..." />;
+  //}
 
   // Afficher l'écran d'erreur si une erreur critique survient
   if (error?.critical) {
