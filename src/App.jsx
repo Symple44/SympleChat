@@ -19,7 +19,7 @@ import {
   Toast,
   CommandPalette,
   KeyboardShortcuts
-} from './components/common';
+} from './components/common/';
 
 const App = () => {
   const {
