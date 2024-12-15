@@ -1,152 +1,233 @@
-// src/services/storage/IndexedDBCache.js
-class IndexedDBCache {
-  constructor(dbName = 'chatCache', version = 1) {
+// src/services/storage/IndexedDBService.js
+class IndexedDBService {
+  constructor(dbName = 'chatApp', version = 1) {
     this.dbName = dbName;
     this.version = version;
     this.db = null;
-    this.ready = this.initDB();
+    this.stores = {
+      messages: 'messages',
+      sessions: 'sessions',
+      documents: 'documents',
+      settings: 'settings',
+      offline: 'offline'
+    };
   }
 
-  async initDB() {
-    try {
-      this.db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open(this.dbName, this.version);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          
-          // Store pour les messages
-          if (!db.objectStoreNames.contains('messages')) {
-            const messageStore = db.createObjectStore('messages', { keyPath: 'id' });
-            messageStore.createIndex('sessionId', 'sessionId', { unique: false });
-            messageStore.createIndex('timestamp', 'timestamp', { unique: false });
-          }
-
-          // Store pour les sessions
-          if (!db.objectStoreNames.contains('sessions')) {
-            const sessionStore = db.createObjectStore('sessions', { keyPath: 'session_id' });
-            sessionStore.createIndex('timestamp', 'timestamp', { unique: false });
-          }
-
-          // Store pour les documents
-          if (!db.objectStoreNames.contains('documents')) {
-            const docStore = db.createObjectStore('documents', { keyPath: 'id' });
-            docStore.createIndex('messageId', 'messageId', { unique: false });
-          }
-        };
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Erreur initialisation IndexedDB:', error);
-      return false;
-    }
-  }
-
-  async transaction(storeName, mode, callback) {
-    await this.ready;
+  async initialize() {
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(storeName, mode);
-      const store = transaction.objectStore(storeName);
+      const request = indexedDB.open(this.dbName, this.version);
 
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
+      request.onerror = () => {
+        console.error('Erreur d\'initialisation IndexedDB:', request.error);
+        reject(request.error);
+      };
 
-      callback(store);
-    });
-  }
-
-  // Gestion des messages
-  async saveMessages(messages) {
-    return this.transaction('messages', 'readwrite', (store) => {
-      messages.forEach(message => {
-        store.put(message);
-      });
-    });
-  }
-
-  async getSessionMessages(sessionId) {
-    const messages = [];
-    await this.transaction('messages', 'readonly', (store) => {
-      const index = store.index('sessionId');
-      const request = index.openCursor(IDBKeyRange.only(sessionId));
-      
       request.onsuccess = (event) => {
-        const cursor = event.target.result;
-        if (cursor) {
-          messages.push(cursor.value);
-          cursor.continue();
+        this.db = event.target.result;
+        console.log('IndexedDB initialisé avec succès');
+        resolve();
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+
+        // Store Messages
+        if (!db.objectStoreNames.contains(this.stores.messages)) {
+          const messagesStore = db.createObjectStore(this.stores.messages, {
+            keyPath: 'id'
+          });
+          messagesStore.createIndex('sessionId', 'sessionId', { unique: false });
+          messagesStore.createIndex('timestamp', 'timestamp', { unique: false });
+          messagesStore.createIndex('type', 'type', { unique: false });
+        }
+
+        // Store Sessions
+        if (!db.objectStoreNames.contains(this.stores.sessions)) {
+          const sessionsStore = db.createObjectStore(this.stores.sessions, {
+            keyPath: 'session_id'
+          });
+          sessionsStore.createIndex('timestamp', 'timestamp', { unique: false });
+          sessionsStore.createIndex('status', 'status', { unique: false });
+        }
+
+        // Store Documents
+        if (!db.objectStoreNames.contains(this.stores.documents)) {
+          const documentsStore = db.createObjectStore(this.stores.documents, {
+            keyPath: 'id'
+          });
+          documentsStore.createIndex('messageId', 'messageId', { unique: false });
+          documentsStore.createIndex('type', 'type', { unique: false });
+        }
+
+        // Store Settings
+        if (!db.objectStoreNames.contains(this.stores.settings)) {
+          db.createObjectStore(this.stores.settings, { keyPath: 'key' });
+        }
+
+        // Store Offline Queue
+        if (!db.objectStoreNames.contains(this.stores.offline)) {
+          const offlineStore = db.createObjectStore(this.stores.offline, {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          offlineStore.createIndex('timestamp', 'timestamp', { unique: false });
+          offlineStore.createIndex('type', 'type', { unique: false });
         }
       };
     });
-    return messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   }
 
-  // Gestion des sessions
-  async saveSessions(sessions) {
-    return this.transaction('sessions', 'readwrite', (store) => {
-      sessions.forEach(session => {
-        store.put(session);
-      });
+  async transaction(storeName, mode = 'readonly') {
+    if (!this.db) {
+      await this.initialize();
+    }
+    const tx = this.db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve(store);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
     });
+  }
+
+  // Messages
+  async saveMessage(message) {
+    const store = await this.transaction(this.stores.messages, 'readwrite');
+    return store.put(message);
+  }
+
+  async getMessages(sessionId, limit = 50, offset = 0) {
+    const store = await this.transaction(this.stores.messages);
+    const index = store.index('sessionId');
+    
+    return new Promise((resolve, reject) => {
+      const messages = [];
+      let skipped = 0;
+      
+      index.openCursor(IDBKeyRange.only(sessionId), 'prev').onsuccess = (event) => {
+        const cursor = event.target.result;
+        
+        if (!cursor || messages.length >= limit) {
+          resolve(messages);
+          return;
+        }
+
+        if (skipped < offset) {
+          skipped++;
+          cursor.continue();
+          return;
+        }
+
+        messages.push(cursor.value);
+        cursor.continue();
+      };
+    });
+  }
+
+  // Sessions
+  async saveSession(session) {
+    const store = await this.transaction(this.stores.sessions, 'readwrite');
+    return store.put(session);
   }
 
   async getSessions() {
-    const sessions = [];
-    await this.transaction('sessions', 'readonly', (store) => {
-      const request = store.openCursor();
-      request.onsuccess = (event) => {
-        const cursor = event.target.result;
-        if (cursor) {
-          sessions.push(cursor.value);
-          cursor.continue();
-        }
-      };
+    const store = await this.transaction(this.stores.sessions);
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
     });
-    return sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }
 
-  // Nettoyage périodique
+  // Documents
+  async saveDocument(document) {
+    const store = await this.transaction(this.stores.documents, 'readwrite');
+    return store.put(document);
+  }
+
+  async getDocuments(messageId) {
+    const store = await this.transaction(this.stores.documents);
+    const index = store.index('messageId');
+    return new Promise((resolve, reject) => {
+      const request = index.getAll(messageId);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Settings
+  async setSetting(key, value) {
+    const store = await this.transaction(this.stores.settings, 'readwrite');
+    return store.put({ key, value });
+  }
+
+  async getSetting(key) {
+    const store = await this.transaction(this.stores.settings);
+    return new Promise((resolve, reject) => {
+      const request = store.get(key);
+      request.onsuccess = () => resolve(request.result?.value);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Offline Queue
+  async addToOfflineQueue(action) {
+    const store = await this.transaction(this.stores.offline, 'readwrite');
+    return store.add({
+      ...action,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  async getOfflineQueue() {
+    const store = await this.transaction(this.stores.offline);
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async clearOfflineQueue() {
+    const store = await this.transaction(this.stores.offline, 'readwrite');
+    return store.clear();
+  }
+
+  // Maintenance
   async cleanup(daysToKeep = 30) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - daysToKeep);
 
-    await Promise.all([
-      this.transaction('messages', 'readwrite', (store) => {
-        const index = store.index('timestamp');
+    for (const storeName of Object.values(this.stores)) {
+      const store = await this.transaction(storeName, 'readwrite');
+      if (store.index('timestamp')) {
         const range = IDBKeyRange.upperBound(cutoff.toISOString());
-        index.openCursor(range).onsuccess = (event) => {
+        store.index('timestamp').openCursor(range).onsuccess = (event) => {
           const cursor = event.target.result;
           if (cursor) {
             cursor.delete();
             cursor.continue();
           }
         };
-      }),
-      this.transaction('sessions', 'readwrite', (store) => {
-        const index = store.index('timestamp');
-        const range = IDBKeyRange.upperBound(cutoff.toISOString());
-        index.openCursor(range).onsuccess = (event) => {
-          const cursor = event.target.result;
-          if (cursor) {
-            cursor.delete();
-            cursor.continue();
-          }
-        };
-      })
-    ]);
+      }
+    }
   }
 
-  // Gestion des erreurs et récupération
-  async recover() {
-    if (!this.db) {
-      await this.initDB();
+  async clear() {
+    for (const storeName of Object.values(this.stores)) {
+      const store = await this.transaction(storeName, 'readwrite');
+      await store.clear();
     }
-    await this.cleanup();
+  }
+
+  async close() {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
   }
 }
 
-export const dbCache = new IndexedDBCache();
+export const indexedDBService = new IndexedDBService();
+export default indexedDBService;
