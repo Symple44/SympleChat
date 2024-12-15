@@ -9,7 +9,7 @@ import ChatContainer from './components/chat/ChatContainer';
 //import ErrorScreen from './components/common/ErrorScreen';
 //import MaintenanceScreen from './components/common/MaintenanceScreen';
 import DebugPanel from './components/debug/DebugPanel';
-import Toast from './components/common/Toast';
+//import Toast from './components/common/Toast';
 import CommandPalette from './components/common/CommandPalette';
 import KeyboardShortcuts from './components/common/KeyboardShortcuts';
 
@@ -70,7 +70,7 @@ const AppContent = () => {
       </Routes>
 
       {/* Composants globaux */}
-      <Toast />
+      
       <CommandPalette />
       <KeyboardShortcuts />
 
