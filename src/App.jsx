@@ -6,7 +6,7 @@ import { performanceMonitor } from './services/performance/PerformanceMonitor';
 import AppProvider from './providers/AppProvider';
 import ChatContainer from './components/chat/ChatContainer';
 //import LoadingScreen from './components/common/LoadingScreen';
-import ErrorScreen from './components/common/ErrorScreen';
+//import ErrorScreen from './components/common/ErrorScreen';
 import MaintenanceScreen from './components/common/MaintenanceScreen';
 import DebugPanel from './components/debug/DebugPanel';
 import { Toast, CommandPalette, KeyboardShortcuts } from './components/common';
@@ -34,9 +34,9 @@ const AppContent = () => {
   //}
 
   // Afficher l'écran d'erreur si une erreur critique survient
-  if (error?.critical) {
-    return <ErrorScreen error={error} />;
-  }
+  //if (error?.critical) {
+  //  return <ErrorScreen error={error} />;
+  //}
 
   // Afficher l'écran de maintenance si nécessaire
   if (stats?.maintenance) {
