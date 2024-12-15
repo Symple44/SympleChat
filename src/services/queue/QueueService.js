@@ -1,7 +1,4 @@
 // src/services/queue/QueueService.js
-import { eventBus, EventTypes } from '../events/EventBus';
-import { performanceMonitor } from '../performance/PerformanceMonitor';
-
 class QueueService {
   constructor() {
     this.queues = new Map();
@@ -10,15 +7,6 @@ class QueueService {
       MEDIUM: 1,
       LOW: 2
     };
-    this.status = {
-      PENDING: 'pending',
-      PROCESSING: 'processing',
-      COMPLETED: 'completed',
-      FAILED: 'failed',
-      RETRYING: 'retrying'
-    };
-    this.maxRetries = 3;
-    this.retryDelays = [1000, 5000, 15000]; // Délais progressifs
   }
 
   createQueue(queueName, options = {}) {
@@ -27,18 +15,15 @@ class QueueService {
     }
 
     this.queues.set(queueName, {
-      name: queueName,
       tasks: [],
-      processing: false,
+      isProcessing: false,
       options: {
         concurrency: options.concurrency || 1,
-        retryAttempts: options.retryAttempts || this.maxRetries,
-        timeout: options.timeout || 30000,
-        ...options
+        retryAttempts: options.retryAttempts || 3,
+        retryDelay: options.retryDelay || 1000,
+        timeout: options.timeout || 30000
       }
     });
-
-    console.log(`Queue ${queueName} created with options:`, options);
   }
 
   async addTask(queueName, task, priority = this.priorities.MEDIUM) {
@@ -53,22 +38,15 @@ class QueueService {
       id: taskId,
       task,
       priority,
-      status: this.status.PENDING,
       attempts: 0,
       added: Date.now(),
-      timeout: null
+      status: 'pending'
     };
 
     queue.tasks.push(taskWrapper);
     queue.tasks.sort((a, b) => a.priority - b.priority);
 
-    eventBus.emit(EventTypes.QUEUE.TASK_ADDED, {
-      queueName,
-      taskId,
-      priority
-    });
-
-    if (!queue.processing) {
+    if (!queue.isProcessing) {
       this.processQueue(queueName);
     }
 
@@ -77,88 +55,48 @@ class QueueService {
 
   async processQueue(queueName) {
     const queue = this.queues.get(queueName);
-    if (!queue || queue.processing) return;
+    if (!queue || queue.isProcessing) return;
 
-    queue.processing = true;
-    
+    queue.isProcessing = true;
+
     while (queue.tasks.length > 0) {
-      const processing = new Set();
-      
-      while (processing.size < queue.options.concurrency && queue.tasks.length > 0) {
-        const task = queue.tasks.shift();
-        processing.add(this.processTask(queueName, task));
+      const task = queue.tasks.shift();
+      try {
+        await this.processTask(task, queue.options);
+      } catch (error) {
+        console.error(`Task ${task.id} failed:`, error);
       }
-
-      await Promise.allSettled(Array.from(processing));
     }
 
-    queue.processing = false;
+    queue.isProcessing = false;
   }
 
-  async processTask(queueName, taskWrapper) {
-    const queue = this.queues.get(queueName);
-    const perfMark = performanceMonitor.startMeasure(`task_${queueName}`);
-
+  async processTask(task, options) {
     try {
-      taskWrapper.status = this.status.PROCESSING;
+      task.status = 'processing';
       
-      // Ajouter un timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        taskWrapper.timeout = setTimeout(() => {
-          reject(new Error('Task timeout'));
-        }, queue.options.timeout);
-      });
-
-      // Exécuter la tâche avec timeout
       const result = await Promise.race([
-        taskWrapper.task(),
-        timeoutPromise
+        task.task(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Task timeout')), options.timeout)
+        )
       ]);
 
-      clearTimeout(taskWrapper.timeout);
-      taskWrapper.status = this.status.COMPLETED;
-
-      eventBus.emit(EventTypes.QUEUE.TASK_COMPLETED, {
-        queueName,
-        taskId: taskWrapper.id,
-        duration: performanceMonitor.endMeasure(perfMark)
-      });
-
+      task.status = 'completed';
       return result;
 
     } catch (error) {
-      clearTimeout(taskWrapper.timeout);
-      taskWrapper.attempts++;
+      task.attempts++;
+      task.status = 'failed';
 
-      if (taskWrapper.attempts < queue.options.retryAttempts) {
-        // Réessayer avec délai
-        taskWrapper.status = this.status.RETRYING;
-        const delay = this.retryDelays[taskWrapper.attempts - 1];
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
-        queue.tasks.push(taskWrapper);
-        
-        eventBus.emit(EventTypes.QUEUE.TASK_RETRY, {
-          queueName,
-          taskId: taskWrapper.id,
-          attempt: taskWrapper.attempts,
-          error: error.message
-        });
-
-      } else {
-        taskWrapper.status = this.status.FAILED;
-        
-        eventBus.emit(EventTypes.QUEUE.TASK_FAILED, {
-          queueName,
-          taskId: taskWrapper.id,
-          error: error.message,
-          attempts: taskWrapper.attempts
-        });
-
-        performanceMonitor.endMeasure(perfMark);
-        throw error;
+      if (task.attempts < options.retryAttempts) {
+        await new Promise(resolve => 
+          setTimeout(resolve, options.retryDelay * Math.pow(2, task.attempts - 1))
+        );
+        return this.processTask(task, options);
       }
+
+      throw error;
     }
   }
 
@@ -167,9 +105,8 @@ class QueueService {
     if (!queue) return null;
 
     return {
-      name: queueName,
       pending: queue.tasks.length,
-      processing: queue.processing,
+      isProcessing: queue.isProcessing,
       tasks: queue.tasks.map(task => ({
         id: task.id,
         status: task.status,
@@ -180,21 +117,14 @@ class QueueService {
     };
   }
 
-  pauseQueue(queueName) {
-    const queue = this.queues.get(queueName);
-    if (queue) {
-      queue.processing = false;
-      eventBus.emit(EventTypes.QUEUE.QUEUE_PAUSED, { queueName });
-    }
-  }
-
-  resumeQueue(queueName) {
-    const queue = this.queues.get(queueName);
-    if (queue && !queue.processing && queue.tasks.length > 0) {
-      this.processQueue(queueName);
-      eventBus.emit(EventTypes.QUEUE.QUEUE_RESUMED, { queueName });
-    }
-  }
-
   clearQueue(queueName) {
     const queue = this.queues.get(queueName);
+    if (queue) {
+      queue.tasks = [];
+      queue.isProcessing = false;
+    }
+  }
+}
+
+export const queueService = new QueueService();
+export default queueService;
