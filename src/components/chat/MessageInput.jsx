@@ -1,60 +1,60 @@
 // src/components/chat/MessageInput.jsx
-import { useState, useCallback } from 'react';
-import { Send, Loader2 } from 'lucide-react';
-import { config } from '../../config';
+import React, { useState, useCallback } from 'react';
+import { Send } from 'lucide-react';
+import debounce from 'lodash/debounce';
 
-const MessageInput = ({ onSend, isLoading, disabled }) => {
+const MessageInput = ({ onSend, isLoading }) => {
   const [message, setMessage] = useState('');
 
-  const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    if (!message.trim() || isLoading || disabled) return;
+  // Debounce la notification de frappe
+  const notifyTyping = useCallback(
+    debounce(() => {
+      console.log('Utilisateur en train d\'écrire...');
+    }, 300),
+    []
+  );
 
-    try {
-      await onSend(message);
-      setMessage('');
-    } catch (error) {
-      console.error('Erreur envoi message:', error);
-    }
-  }, [message, isLoading, disabled, onSend]);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!message.trim() || isLoading) return;
+
+    onSend(message);
+    setMessage('');
+  };
 
   return (
-    <div className="border-t dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex space-x-4">
+    <form onSubmit={handleSubmit} className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+      <div className="flex space-x-4">
         <input
           type="text"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          maxLength={config.CHAT.MAX_MESSAGE_LENGTH}
-          className="flex-1 rounded-lg border dark:border-gray-600 px-4 py-2
+          onChange={(e) => {
+            setMessage(e.target.value);
+            notifyTyping();
+          }}
+          placeholder="Votre message..."
+          className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-600 
                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                   focus:outline-none focus:ring-2 focus:ring-blue-500
-                   disabled:opacity-50 disabled:cursor-not-allowed"
-          placeholder={disabled ? "Connexion en cours..." : "Votre message..."}
-          disabled={disabled || isLoading}
+                   focus:outline-none focus:ring-2 focus:ring-blue-500"
+          maxLength={1000}
         />
         <button
           type="submit"
-          disabled={!message.trim() || isLoading || disabled}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg
-                   hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed
-                   flex items-center gap-2 min-w-[120px] justify-center"
+          disabled={!message.trim() || isLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700
+                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
         >
-          {isLoading ? (
+          {isLoading ? 
+            <span>Envoi...</span> : 
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Envoi...</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4 mr-2" />
               <span>Envoyer</span>
             </>
-          )}
+          }
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 };
 
-export default MessageInput;
+export default React.memo(MessageInput);
