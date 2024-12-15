@@ -1,105 +1,58 @@
 // src/components/chat/MessageList.jsx
-import React, { useState, useRef, useEffect } from 'react';
-import { Bot } from 'lucide-react';
-import DocumentPreview from './DocumentPreview';
-import DocumentViewer from './DocumentViewer';
-import { useTheme } from '../../context/ThemeContext';
-import { config } from '../../config';
+import React, { useRef, useEffect } from 'react';
+import { Bot, User } from 'lucide-react';
 
-const MessageList = ({ messages, isLoading, currentSessionId }) => {
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const { isDark } = useTheme();
-  const messagesEndRef = useRef(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+const MessageList = ({ messages }) => {
+  const bottomRef = useRef(null);
 
   useEffect(() => {
-    scrollToBottom();
+    // Scroll automatique vers le bas
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const formatDate = (timestamp) => {
-    return new Intl.DateTimeFormat('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(new Date(timestamp));
-  };
+  // Garder seulement les 100 derniers messages pour la performance
+  const displayMessages = messages.slice(-100);
 
   return (
-    <>
-      <div className="h-full overflow-y-auto px-4 py-4">
-        <div className="max-w-3xl mx-auto">
-          {messages.map((msg) => (
-            <div key={msg.id} className="mb-3">
-              {msg.type === 'user' ? (
-                <div className="flex justify-end">
-                  <div className="max-w-[80%]">
-                    <div className="bg-blue-500/90 text-white rounded-xl px-4 py-2">
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                      <span className="text-xs opacity-75 block text-right mt-1">
-                        {formatDate(msg.timestamp)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-indigo-500 to-blue-600">
-                    <Bot size={16} className="text-white" />
-                  </div>
-                  <div className="max-w-[80%] ml-3">
-                    <div className={`rounded-xl px-4 py-2 ${
-                      isDark 
-                        ? 'bg-gray-800/90 text-gray-100' 
-                        : 'bg-gray-100/90 text-gray-900'
-                    }`}>
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                      
-                      {msg.fragments?.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {msg.fragments.map((doc, index) => (
-                            <DocumentPreview
-                              key={index}
-                              document={doc}
-                              onClick={() => setSelectedDocument(doc)}
-                            />
-                          ))}
-                        </div>
-                      )}
+    <div className="flex-1 overflow-y-auto p-4">
+      {displayMessages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex items-start space-x-3 mb-4 ${
+            message.type === 'user' ? 'flex-row-reverse' : ''
+          }`}
+        >
+          {/* Avatar */}
+          <div className={`flex-shrink-0 rounded-full p-2 ${
+            message.type === 'user' 
+              ? 'bg-blue-100 dark:bg-blue-900' 
+              : 'bg-green-100 dark:bg-green-900'
+          }`}>
+            {message.type === 'user' 
+              ? <User className="w-4 h-4 text-blue-600" />
+              : <Bot className="w-4 h-4 text-green-600" />}
+          </div>
 
-                      <div className="mt-1 flex justify-between items-center text-xs opacity-75">
-                        <span>{formatDate(msg.timestamp)}</span>
-                        {msg.confidence && (
-                          <span>Confiance: {(msg.confidence * 100).toFixed(0)}%</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+          {/* Message */}
+          <div className={`flex max-w-[80%] ${
+            message.type === 'user' ? 'flex-row-reverse' : ''
+          }`}>
+            <div className={`rounded-lg px-4 py-2 ${
+              message.type === 'user'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+            }`}>
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              <span className="text-xs opacity-70 mt-1 block">
+                {new Date(message.timestamp).toLocaleTimeString()}
+              </span>
             </div>
-          ))}
-
-          {isLoading && (
-            <div className="flex justify-center py-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
+          </div>
         </div>
-      </div>
-
-      {selectedDocument && (
-        <DocumentViewer 
-          document={selectedDocument} 
-          onClose={() => setSelectedDocument(null)} 
-        />
-      )}
-    </>
+      ))}
+      <div ref={bottomRef} />
+    </div>
   );
 };
 
-export default MessageList;
+export default React.memo(MessageList);
