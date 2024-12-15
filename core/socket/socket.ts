@@ -1,6 +1,6 @@
 // src/core/socket/socket.ts
 
-import { config } from '../../api.config';
+import { config } from '../../config/api.config';
 
 interface WebSocketMessage {
   type: string;
