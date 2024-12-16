@@ -5,8 +5,7 @@ import type {
   WebSocketEventType,
   WebSocketMessage,
   WebSocketPayload,
-  UseWebSocketOptions,
-  WebSocketEventHandler
+  UseWebSocketOptions
 } from '../../core/socket/types';
 import { API_CONFIG } from '../../config/api.config';
 
