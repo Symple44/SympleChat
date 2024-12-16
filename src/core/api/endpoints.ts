@@ -3,20 +3,14 @@
 export const API_ENDPOINTS = {
   CHAT: {
     SEND: '/chat',
-    STREAM: '/chat/stream',
-    HISTORY: '/chat/history'
   },
   SESSION: {
-    LIST: '/sessions',
-    CREATE: '/sessions/create',
+    CREATE: '/sessions/new',
     GET: (id: string) => `/sessions/${id}`,
-    UPDATE: (id: string) => `/sessions/${id}`,
-    DELETE: (id: string) => `/sessions/${id}`,
-    MESSAGES: (id: string) => `/sessions/${id}/messages`
+    MESSAGES: (sessionId: string) => `/history/session/${sessionId}`
   },
   USER: {
-    SESSIONS: (userId: string) => `/users/${userId}/sessions`,
-    HISTORY: (userId: string) => `/history/users/${userId}`
+    HISTORY: (userId: string) => `/history/user/${userId}`
   },
   HEALTH: '/health'
 } as const;
