@@ -55,8 +55,10 @@ export interface SendMessageOptions {
   useStream?: boolean;
 }
 
-export interface ChatContextValue extends ChatState {
-  sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
-  clearMessages: () => void;
-  setError: (error: string | null) => void;
+export interface ChatContextValue {
+  messages: Message[];
+  isLoading: boolean;
+  error: string | null;
+  currentSessionId: string | null;
+  sendMessage: (content: string) => Promise<void>;
 }
