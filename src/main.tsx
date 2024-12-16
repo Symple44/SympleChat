@@ -9,7 +9,7 @@ import { socketManager } from './core/socket/socket';
 // Styles globaux
 import './styles/main.css';
 
-const ErrorDisplay = ({ error }: { error: string }) => (
+const ErrorDisplay: React.FC<{ error: string }> = ({ error }) => (
   <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
     <div className="max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 text-center">
       <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
@@ -28,7 +28,6 @@ const ErrorDisplay = ({ error }: { error: string }) => (
   </div>
 );
 
-// Configuration initiale
 async function initializeApp() {
   let root: ReactDOM.Root | null = null;
   
@@ -59,53 +58,14 @@ async function initializeApp() {
     
     if (root) {
       root.render(<ErrorDisplay error={errorMessage} />);
-    } else {
-      console.error('Element root non trouvé');
     }
   }
 }
 
-// Gestion des erreurs globales non capturées
-const handleGlobalError = (event: ErrorEvent) => {
-  console.error('Erreur globale:', event.error);
-  event.preventDefault();
-  
-  ReactDOM.createRoot(document.getElementById('chat-root') as HTMLElement).render(
-    <ErrorDisplay error="Une erreur inattendue s'est produite. Veuillez rafraîchir la page." />
-  );
-};
-
-const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  console.error('Promesse rejetée non gérée:', event.reason);
-  event.preventDefault();
-
-  ReactDOM.createRoot(document.getElementById('chat-root') as HTMLElement).render(
-    <ErrorDisplay error="Une erreur inattendue s'est produite. Veuillez rafraîchir la page." />
-  );
-};
-
-// Configuration des gestionnaires d'erreurs globaux
-if (process.env.NODE_ENV !== 'production') {
-  window.addEventListener('error', handleGlobalError);
-  window.addEventListener('unhandledrejection', handleUnhandledRejection);
-}
-
 // Démarrage de l'application
-initializeApp().catch(error => {
-  console.error('Erreur critique lors du démarrage:', error);
-  ReactDOM.createRoot(document.getElementById('chat-root') as HTMLElement).render(
-    <ErrorDisplay error="Erreur critique lors du démarrage de l'application." />
-  );
-});
+initializeApp();
 
 // Hot Module Replacement (HMR)
 if (import.meta.hot) {
   import.meta.hot.accept();
-}
-
-// Activation du debugging en développement
-if (process.env.NODE_ENV === 'development') {
-  console.log('Mode développement activé');
-  console.log('API URL:', import.meta.env.VITE_API_URL);
-  console.log('WS URL:', import.meta.env.VITE_WS_HOST);
 }
