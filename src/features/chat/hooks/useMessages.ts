@@ -22,27 +22,27 @@ export function useMessages(): UseMessagesReturn {
   const store = useChatStore();
 
   const loadMoreMessages = useCallback(async () => {
-    if (!sessionId || !userId || store.isLoading) return;
+  if (!sessionId || !userId || store.isLoading) return;
 
-    try {
-      const lastMessageId = store.messages[0]?.id;
-      const response = await apiClient.get<Message[]>(API_ENDPOINTS.CHAT.HISTORY, {
-        params: {
-          sessionId,
-          userId,
-          before: lastMessageId,
-          limit: '20'
-        }
-      });
-
-      if (response.length > 0) {
-        store.setMessages([...response, ...store.messages]);
+  try {
+    const lastMessageId = store.messages[0]?.id;
+    const response = await apiClient.get<Message[]>(API_ENDPOINTS.CHAT.HISTORY, {
+      params: {
+        sessionId,
+        userId,
+        before: lastMessageId,
+        limit: '20'
       }
-    } catch (error) {
-      console.error('Error loading more messages:', error);
-      store.setError('Erreur lors du chargement des messages');
+    });
+
+    if (response.length > 0) {
+      store.setMessages([...response, ...store.messages]);
     }
-  }, [sessionId, userId, store]);
+  } catch (error) {
+    console.error('Error loading more messages:', error);
+    store.setError('Erreur lors du chargement des messages');
+  }
+}, [sessionId, userId, store]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || !sessionId || store.isLoading) {
