@@ -1,3 +1,5 @@
+// /src/providers/ChatProvider.tsx
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
