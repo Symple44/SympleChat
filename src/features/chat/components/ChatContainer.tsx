@@ -1,6 +1,6 @@
 // src/features/chat/components/ChatContainer.tsx
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { useStore } from '../../../store';
@@ -32,7 +32,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
   const setError = useStore(state => state.setError);
 
   // WebSocket connection
-  const { isConnected, send: sendSocketMessage } = useWebSocket();
+  const { isConnected } = useWebSocket();
 
   const handleSelectSession = (session: Session) => {
     setCurrentSession(session);
