@@ -94,12 +94,9 @@ export const useChatStore = create<ChatStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiClient.get<Message[]>(
-            API_ENDPOINTS.CHAT.HISTORY,
-            { 
-              params: { sessionId } 
-            }
-          );
+          const messages = await apiClient.get<Message[]>(
+  API_ENDPOINTS.SESSION.HISTORY(sessionId)
+);
 
           set({ 
             messages: response,
