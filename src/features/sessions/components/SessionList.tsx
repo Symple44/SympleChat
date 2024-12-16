@@ -62,7 +62,12 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
       });
       
       if (response) {
-        setSessions((prevSessions: Session[]) => [response, ...prevSessions]);
+        // Version corrigée avec le nouveau type
+        setSessions(currentSessions => 
+          Array.isArray(currentSessions) 
+            ? [response, ...currentSessions]
+            : [response]
+        );
         setCurrentSession(response);
         navigate(`/${userId}/session/${response.id}`);
       }
