@@ -1,6 +1,6 @@
 // src/components/chat/SessionList.tsx
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, MessageSquare, Loader2, Archive } from 'lucide-react';
 import { useStore } from '../../../store';
@@ -18,67 +18,94 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { isDark } = useTheme();
-  const [isLoading, setIsLoading] = useState(true); // Commencez avec true
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const sessions = useStore(state => state.session.sessions) ?? []; // Valeur par défaut vide
+  const sessions = useStore(state => state.session.sessions);
   const currentSessionId = useStore(state => state.session.currentSessionId);
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const setSessions = useStore(state => state.setSessions);
 
-  export const API_ENDPOINTS = {
-  CHAT: {
-    SEND: '/chat',
-  },
-  SESSION: {
-    CREATE: '/sessions/new',
-    GET: (id: string) => `/sessions/${id}`,
-    MESSAGES: (sessionId: string) => `/history/session/${sessionId}`
-  },
-  USER: {
-    HISTORY: (userId: string) => `/history/user/${userId}`
-  },
-  HEALTH: '/health'
-} as const;
+  // Charger les sessions
+  useEffect(() => {
+    const loadSessions = async () => {
+      if (!userId) {
+        setError("ID utilisateur non disponible");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await apiClient.get<any[]>(
+          API_ENDPOINTS.USER.HISTORY(userId)
+        );
+
+        const formattedSessions: Session[] = response.map(history => ({
+          id: history.session_id,
+          userId,
+          status: 'active',
+          metadata: {
+            title: history.query || "Nouvelle conversation",
+            messageCount: 1,
+            createdAt: history.timestamp,
+            updatedAt: history.timestamp,
+            language: 'fr' // Langue par défaut
+          }
+        }));
+
+        setSessions(formattedSessions);
+        setError(null);
+      } catch (err) {
+        console.error('Erreur chargement sessions:', err);
+        setError('Impossible de charger les sessions');
+        setSessions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadSessions();
+  }, [userId, setSessions]);
 
   const handleNewSession = async () => {
-  if (!userId) {
-    setError("ID utilisateur non disponible");
-    return;
-  }
-
-  try {
-    setIsLoading(true);
-    const response = await apiClient.post<{ session_id: string }>(
-      API_ENDPOINTS.SESSION.CREATE,
-      { user_id: userId }
-    );
-
-    if (response && response.session_id) {
-      // Création d'une nouvelle session avec les données minimales
-      const newSession: Session = {
-        id: response.session_id,
-        userId,
-        status: 'active',
-        metadata: {
-          title: "Nouvelle conversation",
-          messageCount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      };
-
-      setSessions(prevSessions => [newSession, ...prevSessions]);
-      setCurrentSession(newSession);
-      navigate(`/${userId}/session/${newSession.id}`);
+    if (!userId) {
+      setError("ID utilisateur non disponible");
+      return;
     }
-  } catch (err) {
-    console.error('Erreur création session:', err);
-    setError('Impossible de créer une nouvelle session');
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    try {
+      setIsLoading(true);
+      const response = await apiClient.post<{ session_id: string }>(
+        API_ENDPOINTS.SESSION.CREATE,
+        { user_id: userId }
+      );
+
+      if (response && response.session_id) {
+        const newSession: Session = {
+          id: response.session_id,
+          userId,
+          status: 'active',
+          metadata: {
+            title: "Nouvelle conversation",
+            messageCount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            language: 'fr' // Langue par défaut
+          }
+        };
+
+        setSessions(prevSessions => [newSession, ...prevSessions]);
+        setCurrentSession(newSession);
+        navigate(`/${userId}/session/${newSession.id}`);
+      }
+    } catch (err) {
+      console.error('Erreur création session:', err);
+      setError('Impossible de créer une nouvelle session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSessionSelect = async (session: Session) => {
     if (!userId) {
