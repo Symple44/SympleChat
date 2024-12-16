@@ -2,72 +2,186 @@
 
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { rootReducer } from './rootReducer';
-import type { RootState, RootActions } from './rootReducer';
+import type { Message } from '../features/chat/types/chat';
+import type { Session } from '../core/session/types';
 
-export type StoreState = RootState;
-export type StoreActions = RootActions;
+export interface StoreState {
+  chat: {
+    messages: Message[];
+    isLoading: boolean;
+    error: string | null;
+  };
+  session: {
+    sessions: Session[];
+    currentSessionId: string | null;
+    isLoading: boolean;
+    error: string | null;
+  };
+  ui: {
+    theme: 'light' | 'dark';
+    error: string | null;
+    isMenuOpen: boolean;
+  };
+}
 
-// Création du store avec persistance
+export interface StoreActions {
+  // Chat actions
+  sendMessage: (content: string, options?: any) => Promise<void>;
+  setMessages: (messages: Message[]) => void;
+  addMessage: (message: Message) => void;
+  clearMessages: () => void;
+  loadSessionMessages: (sessionId: string) => Promise<void>;
+  
+  // Session actions
+  loadSessions: () => Promise<void>;
+  setCurrentSession: (session: Session) => void;
+  setSessions: (sessions: Session[]) => void;
+  createNewSession: () => Promise<Session>;
+  
+  // UI actions
+  setTheme: (isDark: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
+  
+  // Common actions
+  resetStore: () => void;
+}
+
+const initialState: StoreState = {
+  chat: {
+    messages: [],
+    isLoading: false,
+    error: null
+  },
+  session: {
+    sessions: [],
+    currentSessionId: null,
+    isLoading: false,
+    error: null
+  },
+  ui: {
+    theme: 'light',
+    error: null,
+    isMenuOpen: false
+  }
+};
+
 export const useStore = create<StoreState & StoreActions>()(
   persist(
     (set, get) => ({
-      ...rootReducer.initialState,
-      
+      ...initialState,
+
       // Chat actions
-      setMessages: (messages) => 
-        set((state) => rootReducer.chat.setMessages(state, messages)),
-      
-      addMessage: (message) => 
-        set((state) => rootReducer.chat.addMessage(state, message)),
-      
-      clearMessages: () => 
-        set((state) => rootReducer.chat.clearMessages(state)),
-        
-      // Session actions
-      setCurrentSession: (session) =>
-        set((state) => rootReducer.session.setCurrentSession(state, session)),
-      
-      setSessions: (sessions) =>
-        set((state) => rootReducer.session.setSessions(state, sessions)),
-        
-      // UI actions
-      setTheme: (isDark) =>
-        set((state) => rootReducer.ui.setTheme(state, isDark)),
-      
-      setError: (error) =>
-        set((state) => rootReducer.ui.setError(state, error)),
-        
-      clearError: () =>
-        set((state) => rootReducer.ui.clearError(state)),
-        
-      // Actions communes
-      resetStore: () => {
-        set(rootReducer.initialState);
+      sendMessage: async (content, options) => {
+        set(state => ({ chat: { ...state.chat, isLoading: true } }));
+        try {
+          // Implémentation de l'envoi du message
+          set(state => ({ chat: { ...state.chat, isLoading: false } }));
+        } catch (error) {
+          set(state => ({ 
+            chat: { 
+              ...state.chat, 
+              isLoading: false, 
+              error: error instanceof Error ? error.message : 'Error sending message'
+            } 
+          }));
+        }
       },
       
-      // Helper pour mettre à jour plusieurs états à la fois
-      batchUpdate: (updates) => {
-        set((state) => ({
-          ...state,
-          ...updates
-        }));
-      }
+      setMessages: (messages) => set(state => ({
+        chat: { ...state.chat, messages }
+      })),
+      
+      addMessage: (message) => set(state => ({
+        chat: { ...state.chat, messages: [...state.chat.messages, message] }
+      })),
+      
+      clearMessages: () => set(state => ({
+        chat: { ...state.chat, messages: [] }
+      })),
+
+      loadSessionMessages: async (sessionId) => {
+        set(state => ({ chat: { ...state.chat, isLoading: true } }));
+        try {
+          // Implémentation du chargement des messages
+          set(state => ({ chat: { ...state.chat, isLoading: false } }));
+        } catch (error) {
+          set(state => ({ 
+            chat: { 
+              ...state.chat, 
+              isLoading: false, 
+              error: error instanceof Error ? error.message : 'Error loading messages'
+            } 
+          }));
+        }
+      },
+
+      // Session actions
+      loadSessions: async () => {
+        set(state => ({ session: { ...state.session, isLoading: true } }));
+        try {
+          // Implémentation du chargement des sessions
+          set(state => ({ session: { ...state.session, isLoading: false } }));
+        } catch (error) {
+          set(state => ({ 
+            session: { 
+              ...state.session, 
+              isLoading: false, 
+              error: error instanceof Error ? error.message : 'Error loading sessions'
+            } 
+          }));
+        }
+      },
+
+      setCurrentSession: (session) => set(state => ({
+        session: { ...state.session, currentSessionId: session.id }
+      })),
+
+      setSessions: (sessions) => set(state => ({
+        session: { ...state.session, sessions }
+      })),
+
+      createNewSession: async () => {
+        set(state => ({ session: { ...state.session, isLoading: true } }));
+        try {
+          // Implémentation de la création d'une session
+          const newSession = {} as Session; // À implémenter
+          set(state => ({ session: { ...state.session, isLoading: false } }));
+          return newSession;
+        } catch (error) {
+          set(state => ({ 
+            session: { 
+              ...state.session, 
+              isLoading: false, 
+              error: error instanceof Error ? error.message : 'Error creating session'
+            } 
+          }));
+          throw error;
+        }
+      },
+
+      // UI actions
+      setTheme: (isDark) => set(state => ({
+        ui: { ...state.ui, theme: isDark ? 'dark' : 'light' }
+      })),
+
+      setError: (error) => set(state => ({
+        ui: { ...state.ui, error }
+      })),
+
+      clearError: () => set(state => ({
+        ui: { ...state.ui, error: null }
+      })),
+
+      // Common actions
+      resetStore: () => set(initialState)
     }),
     {
-      name: 'chat-app-storage',
+      name: 'chat-store',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // On ne persiste que certaines parties du state
-        chat: {
-          messages: state.chat.messages
-        },
-        session: {
-          currentSessionId: state.session.currentSessionId
-        },
-        ui: {
-          theme: state.ui.theme
-        }
+        ui: { theme: state.ui.theme },
+        session: { currentSessionId: state.session.currentSessionId }
       })
     }
   )
