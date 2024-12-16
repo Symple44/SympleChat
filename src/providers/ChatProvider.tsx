@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
-import { socketManager } from '../core/socket/socket';
+import { useSocket } from './SocketProvider';
 import type { ChatContextValue } from '../features/chat/types/chat';
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -27,17 +27,16 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     sessionId?: string; 
   }>();
   const [error, setError] = useState<string | null>(null);
+  const { send } = useSocket();
 
   const {
     chat: { messages, isLoading },
     session: { currentSessionId },
-    sendMessage,
-    loadSessionMessages
+    sendMessage: storeSendMessage,
   } = useStore((state) => ({
     chat: state.chat,
     session: state.session,
     sendMessage: state.sendMessage,
-    loadSessionMessages: state.loadSessionMessages
   }));
 
   useEffect(() => {
@@ -58,18 +57,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
 
     try {
-      const message = await sendMessage(content);
+      await storeSendMessage(content);
+      
+      send('message', {
+        content,
+        userId,
+        sessionId: routeSessionId,
+      });
 
-      if (socketManager.isConnected) {
-        socketManager.send('message', {
-          content,
-          userId,
-          sessionId: routeSessionId,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      return message;
     } catch (error) {
       console.error('Erreur envoi message:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'envoi du message';
@@ -90,8 +85,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     isLoading,
     error,
     currentSessionId,
-    sendMessage: handleSendMessage,
-    loadSessionMessages
+    sendMessage: handleSendMessage
   };
 
   return (
