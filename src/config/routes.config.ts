@@ -1,6 +1,6 @@
-// src/config/routes.config.tsx
-import React from 'react';
+// src/config/routes.config.ts
 import { RouteObject } from 'react-router-dom';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import App from '../App';
 import SessionList from '../features/sessions/components/SessionList';
@@ -18,37 +18,39 @@ export const ROUTES = {
   }
 } as const;
 
-type AppRouteObject = Omit<RouteObject, 'children'> & {
-  children?: AppRouteObject[];
-};
-
 const defaultUserId = 'oweo';
 
-export const routes: AppRouteObject[] = [
+export const routes: RouteObject[] = [
   {
     path: ROUTES.HOME,
-    element: <Navigate to={`/${defaultUserId}`} replace />
+    element: React.createElement(Navigate, { 
+      to: `/${defaultUserId}`, 
+      replace: true 
+    })
   },
   {
     path: ROUTES.USER,
-    element: <App />,
+    element: React.createElement(App),
     children: [
       {
         path: '',
-        element: <SessionList />
+        element: React.createElement(SessionList)
       },
       {
         path: 'session/:sessionId',
-        element: <ChatContainer />
+        element: React.createElement(ChatContainer)
       }
     ]
   },
   {
     path: '*',
-    element: <Navigate to={ROUTES.HOME} replace />
+    element: React.createElement(Navigate, { 
+      to: ROUTES.HOME, 
+      replace: true 
+    })
   }
 ];
 
-export const createRouteConfig = (): AppRouteObject[] => routes;
+export const createRouteConfig = (): RouteObject[] => routes;
 
 export default ROUTES;
