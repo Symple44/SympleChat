@@ -96,7 +96,9 @@ export const useChatStore = create<ChatStore>()(
         try {
           const response = await apiClient.get<Message[]>(
             API_ENDPOINTS.CHAT.HISTORY,
-            { params: { sessionId } }
+            { 
+              params: { sessionId } 
+            }
           );
 
           set({ 
