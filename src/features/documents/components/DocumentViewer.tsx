@@ -160,9 +160,26 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
       {/* Content */}
       <div className="p-8">
         {/* Images section */}
-        {APP_CONFIG.UI.SHOW_DOCUMENT_IMAGES && 
-          document.images?.length > 0 && 
-          renderImages(document.images)}
+        {APP_CONFIG.UI.SHOW_DOCUMENT_IMAGES && document.images && (
+    <>
+      {document.images.length > 0 && (
+        <div className="flex justify-between items-start mb-8">
+          {document.images.map((image, index) => (
+            <div
+              key={index}
+              className={`p-2 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-white'} shadow-sm`}
+            >
+              <img
+                src={`data:image/${image.type};base64,${image.data}`}
+                alt={image.alt || 'Document image'}
+                className="h-12 object-contain"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )}
 
         {/* Context before */}
         {renderContextSection(document.context_before, 'before')}
