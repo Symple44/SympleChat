@@ -4,17 +4,19 @@ export const API_ENDPOINTS = {
   CHAT: {
     SEND: '/chat',
     STREAM: '/chat/stream',
-    HISTORY: '/chat/history',
+    HISTORY: '/chat/history'
   },
   SESSION: {
-    CREATE: '/sessions/new',
-    GET: (id: string) => `/sessions/${id}`,
     LIST: '/sessions',
+    CREATE: '/sessions/create',
+    GET: (id: string) => `/sessions/${id}`,
+    UPDATE: (id: string) => `/sessions/${id}`,
     DELETE: (id: string) => `/sessions/${id}`,
+    MESSAGES: (id: string) => `/sessions/${id}/messages`
   },
   USER: {
-    HISTORY: (userId: string) => `/history/user/${userId}`,
     SESSIONS: (userId: string) => `/users/${userId}/sessions`,
+    HISTORY: (userId: string) => `/history/users/${userId}`
   },
   HEALTH: '/health'
 } as const;
