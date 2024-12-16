@@ -2,11 +2,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { useWebSocket } from '../shared/hooks/useWebSocket';
-import type { 
-  WebSocketEventType, 
-  WebSocketMessage, 
-  WebSocketPayload 
-} from '../core/socket/types';
+import type { WebSocketEventType, WebSocketPayload } from '../core/socket/types';
 import { API_CONFIG } from '../config/api.config';
 
 interface SocketContextValue {
