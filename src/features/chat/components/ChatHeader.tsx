@@ -11,7 +11,7 @@ interface ChatHeaderProps {
   connected: boolean;
   sessionId: string | null;
   sessions?: Session[];
-  onSelectSession?: (sessionId: string) => void;
+  onSelectSession?: (session: Session) => void;  // Changé de string à Session
   onNewSession?: () => void;
   className?: string;
 }
