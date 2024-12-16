@@ -4,12 +4,20 @@ interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
 }
 
+const getBaseUrl = () => {
+  const isDev = import.meta.env.DEV;
+  if (isDev && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return `${window.location.origin}/api`;
+};
+
 export class ApiClient {
   private baseUrl: string;
   private defaultHeaders: HeadersInit;
 
-  constructor(baseUrl: string = '', defaultHeaders: HeadersInit = {}) {
-    this.baseUrl = baseUrl || '/api';
+  constructor(baseUrl?: string, defaultHeaders: HeadersInit = {}) {
+    this.baseUrl = baseUrl || getBaseUrl();
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       ...defaultHeaders
@@ -19,17 +27,24 @@ export class ApiClient {
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { params, headers, ...requestInit } = options;
 
-    // Construire l'URL avec les paramètres de requête
-    const url = new URL(endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`);
+    // Construction de l'URL complète
+    let fullUrl = endpoint;
+    if (!endpoint.startsWith('http')) {
+      fullUrl = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    }
+
+    // Ajout des paramètres de requête
+    const url = new URL(fullUrl);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          url.searchParams.append(key, value);
+          url.searchParams.append(key, value.toString());
         }
       });
     }
 
     try {
+      console.log('Fetching:', url.toString()); // Debug log
       const response = await fetch(url.toString(), {
         ...requestInit,
         headers: {
