@@ -1,8 +1,7 @@
 // src/providers/AppProvider.tsx
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import App from '../App';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ErrorBoundary from '../shared/components/ErrorBoundary';
 import { ThemeProvider } from './ThemeProvider';
 import { SocketProvider } from './SocketProvider';
