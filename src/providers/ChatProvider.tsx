@@ -1,15 +1,14 @@
-// src/providers/ChatProvider.tsx
-
-import React, { createContext, useContext, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
+import { socketManager } from '../core/socket/socket';
 import type { ChatContextValue } from '../features/chat/types/chat';
+
+const ChatContext = createContext<ChatContextValue | null>(null);
 
 interface ChatProviderProps {
   children: React.ReactNode;
 }
-
-export const ChatContext = createContext<ChatContextValue | null>(null);
 
 export const useChat = () => {
   const context = useContext(ChatContext);
@@ -20,26 +19,24 @@ export const useChat = () => {
 };
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
+  const navigate = useNavigate();
   const { userId, sessionId: routeSessionId } = useParams<{ 
     userId?: string; 
     sessionId?: string; 
   }>();
   const [error, setError] = useState<string | null>(null);
-  const store = useStore(state => ({
-    messages: state.chat.messages,
-    isLoading: state.chat.isLoading,
-    currentSessionId: state.session.currentSessionId,
+
+  const {
+    chat: { messages, isLoading },
+    session: { currentSessionId },
+    sendMessage,
+    loadSessionMessages
+  } = useStore((state) => ({
+    chat: state.chat,
+    session: state.session,
     sendMessage: state.sendMessage,
     loadSessionMessages: state.loadSessionMessages
   }));
-  const {
-    messages,
-    isLoading,
-    currentSessionId,
-    sendMessage: storeSendMessage,
-    loadSessionMessages,
-    clearMessages
-  } = useStore();
 
   useEffect(() => {
     if (routeSessionId && routeSessionId !== currentSessionId && !isLoading) {
@@ -59,20 +56,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
 
     try {
-      const message = await storeSendMessage(content, {
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
+      const message = await sendMessage(content);
 
       if (socketManager.isConnected) {
-        socketManager.send({
-          type: 'message',
-          payload: {
-            content,
-            sessionId: routeSessionId,
-            timestamp: new Date().toISOString()
-          }
+        socketManager.send('message', {
+          content,
+          userId,
+          sessionId: routeSessionId,
+          timestamp: new Date().toISOString()
         });
       }
 
@@ -98,8 +89,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     error,
     currentSessionId,
     sendMessage: handleSendMessage,
-    clearMessages,
-    setError
+    loadSessionMessages
   };
 
   return (
