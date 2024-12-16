@@ -1,7 +1,10 @@
 // src/config/routes.config.ts
 
+// src/config/routes.config.ts
+
+import { RouteObject } from 'react-router-dom';
 import { Navigate } from 'react-router-dom';
-import React from 'react';
+import type { ReactElement } from 'react';
 import App from '../App';
 import SessionList from '../features/sessions/components/SessionList';
 import ChatContainer from '../features/chat/components/ChatContainer';
@@ -12,43 +15,43 @@ export const ROUTES = {
   SESSION: '/:userId/session/:sessionId',
   
   helpers: {
-    getUserPath: (userId: string) => `/${userId}`,
-    getSessionPath: (userId: string, sessionId: string) => 
+    getUserPath: (userId: string): string => `/${userId}`,
+    getSessionPath: (userId: string, sessionId: string): string => 
       `/${userId}/session/${sessionId}`
   }
 } as const;
 
-interface RouteConfig {
-  path: string;
-  element: React.ReactNode;
-  children?: RouteConfig[];
+interface AppRouteObject extends RouteObject {
+  children?: AppRouteObject[];
 }
 
-export const createRouteConfig = (): RouteConfig[] => {
-  return [
-    {
-      path: ROUTES.HOME,
-      element: <Navigate to="/oweo" replace />
-    },
-    {
-      path: ROUTES.USER,
-      element: <App />,
-      children: [
-        {
-          path: '',
-          element: <SessionList />
-        },
-        {
-          path: 'session/:sessionId',
-          element: <ChatContainer />
-        }
-      ]
-    },
-    {
-      path: '*',
-      element: <Navigate to={ROUTES.HOME} replace />
-    }
-  ];
-};
+const defaultUserId = 'oweo';
+
+export const routes: AppRouteObject[] = [
+  {
+    path: ROUTES.HOME,
+    element: React.createElement(Navigate, { to: `/${defaultUserId}`, replace: true })
+  },
+  {
+    path: ROUTES.USER,
+    element: React.createElement(App),
+    children: [
+      {
+        path: '',
+        element: React.createElement(SessionList)
+      },
+      {
+        path: 'session/:sessionId',
+        element: React.createElement(ChatContainer)
+      }
+    ]
+  },
+  {
+    path: '*',
+    element: React.createElement(Navigate, { to: ROUTES.HOME, replace: true })
+  }
+];
+
+export const createRouteConfig = (): AppRouteObject[] => routes;
 
 export default ROUTES;
