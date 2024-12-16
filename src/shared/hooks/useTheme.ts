@@ -9,7 +9,7 @@ interface UseThemeReturn {
   systemTheme: 'dark' | 'light';
 }
 
-export function useTheme(defaultDark = false): UseThemeReturn {
+export function useTheme(): UseThemeReturn {
   const [isDark, setIsDark] = useState(() => {
     const stored = localStorage.getItem('theme');
     if (stored) return stored === 'dark';
