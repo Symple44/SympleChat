@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { socketManager } from '../core/socket/socket';
 import type { WebSocketMessage } from '../core/socket/types';
+import { useWebSocket } from '../shared/hooks/useWebSocket';
 
 interface SocketContextValue {
   isConnected: boolean;
