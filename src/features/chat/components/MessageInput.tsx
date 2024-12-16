@@ -1,8 +1,7 @@
 // src/features/chat/components/MessageInput.tsx
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Loader2, PaperclipIcon } from 'lucide-react';
-import { useStore } from '../../../store';
+import { Send, Loader2 } from 'lucide-react';
 import { APP_CONFIG } from '../../../config/app.config';
 
 interface MessageInputProps {
@@ -20,13 +19,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [message, setMessage] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const setError = useStore(state => state.setError);
 
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
     }
   }, []);
 
@@ -42,11 +40,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
     try {
       await onSend(message);
       setMessage('');
+      
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erreur lors de l\'envoi');
+      console.error('Erreur envoi message:', error);
     }
   };
 
@@ -54,6 +53,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void handleSubmit(e);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    if (value.length <= APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH) {
+      setMessage(value);
+      adjustTextareaHeight();
     }
   };
 
@@ -67,18 +74,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <textarea
             ref={textareaRef}
             value={message}
-            onChange={(e) => {
-              setMessage(e.target.value.slice(0, APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH));
-              adjustTextareaHeight();
-            }}
+            onChange={handleChange}
             onKeyDown={handleKeyDown}
-            maxLength={APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH}
             rows={1}
             className="w-full rounded-lg border dark:border-gray-600 px-4 py-2
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500
                      disabled:opacity-50 disabled:cursor-not-allowed
-                     resize-none min-h-[42px] max-h-[200px]"
+                     resize-none min-h-[42px]"
             placeholder={disabled ? "Connexion en cours..." : "Votre message..."}
             disabled={disabled || isLoading}
           />
