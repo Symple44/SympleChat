@@ -61,8 +61,12 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className={`flex items-center justify-center h-screen ${
+        isDark ? 'bg-gray-900' : 'bg-gray-50'
+      }`}>
+        <Loader2 className={`w-8 h-8 animate-spin ${
+          isDark ? 'text-blue-400' : 'text-blue-500'
+        }`} />
       </div>
     );
   }
@@ -70,11 +74,19 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   if (listError) {
     return (
       <div className="max-w-2xl mx-auto p-4 text-center">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-600 dark:text-red-400">{listError}</p>
+        <div className={`border rounded-lg p-4 ${
+          isDark 
+            ? 'bg-red-900/20 border-red-800 text-red-400'
+            : 'bg-red-50 border-red-200 text-red-600'
+        }`}>
+          <p>{listError}</p>
           <button
             onClick={() => void fetchSessions()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            className={`mt-4 px-4 py-2 rounded-lg ${
+              isDark 
+                ? 'bg-red-700 hover:bg-red-600'
+                : 'bg-red-600 hover:bg-red-700'
+            } text-white`}
           >
             Réessayer
           </button>
@@ -86,7 +98,9 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   return (
     <div className={`max-w-2xl mx-auto p-4 ${className}`}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className={`text-2xl font-bold ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>
           Sessions de chat
         </h1>
         <button
@@ -107,30 +121,44 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
               className={`
                 p-4 rounded-lg border cursor-pointer transition-all
                 ${session.id === currentSessionId
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'
+                  ? isDark
+                    ? 'border-blue-700 bg-blue-900/20'
+                    : 'border-blue-500 bg-blue-50'
+                  : isDark
+                    ? 'border-gray-700 hover:border-blue-700'
+                    : 'border-gray-200 hover:border-blue-300'
                 }
               `}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3">
-                  <MessageSquare className="w-5 h-5 mt-1 text-blue-500" />
+                  <MessageSquare className={`w-5 h-5 mt-1 ${
+                    isDark ? 'text-blue-400' : 'text-blue-500'
+                  }`} />
                   <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">
+                    <h3 className={`font-medium ${
+                      isDark ? 'text-white' : 'text-gray-900'
+                    }`}>
                       {session.metadata.title || "Nouvelle conversation"}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className={`text-sm mt-1 ${
+                      isDark ? 'text-gray-400' : 'text-gray-500'
+                    }`}>
                       {formatRelativeTime(session.metadata.createdAt)}
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
                     {session.metadata.messageCount} messages
                   </span>
                   {session.status === 'archived' && (
-                    <Archive className="w-4 h-4 text-gray-400" />
+                    <Archive className={`w-4 h-4 ${
+                      isDark ? 'text-gray-500' : 'text-gray-400'
+                    }`} />
                   )}
                 </div>
               </div>
@@ -138,10 +166,16 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           ))}
         </div>
       ) : (
-        <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-          <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Aucune session de chat</p>
-          <p className="text-sm mt-2">
+        <div className="text-center mt-8">
+          <MessageSquare className={`w-12 h-12 mx-auto mb-4 opacity-50 ${
+            isDark ? 'text-gray-400' : 'text-gray-500'
+          }`} />
+          <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+            Aucune session de chat
+          </p>
+          <p className={`text-sm mt-2 ${
+            isDark ? 'text-gray-500' : 'text-gray-600'
+          }`}>
             Commencez une nouvelle conversation en cliquant sur le bouton ci-dessus
           </p>
         </div>
