@@ -8,7 +8,7 @@ import type { ChatState, Message, SendMessageOptions } from '../types/chat';
 
 interface ChatStore extends ChatState {
   // Actions
-  sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
+  sendMessage: (content: string, options?: SendMessageOptions) => Promise<Message>;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   clearMessages: () => void;
@@ -64,7 +64,8 @@ export const useChatStore = create<ChatStore>()(
           // Ajouter la réponse
           get().addMessage(response);
 
-          return response;
+          return message;
+          
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
           set({ error: errorMessage });
