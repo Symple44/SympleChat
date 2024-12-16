@@ -44,6 +44,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
       console.error('Erreur création session:', error);
     }
   };
+  
 
   if (error) {
     return (
@@ -61,6 +62,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
       </div>
     );
   }
+
+  const handleSendMessage = useCallback(async (content: string) => {
+    if (!currentSessionId) {
+      throw new Error('No active session');
+    }
+    await sendMessage(content, currentSessionId);
+  }, [currentSessionId, sendMessage]);
 
   return (
     <div className={`flex flex-col h-screen ${className}`}>
