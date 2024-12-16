@@ -26,10 +26,21 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const { isDark, toggleTheme } = useTheme();
   const [showSessions, setShowSessions] = useState(false);
   
-  const handleSessionSelect = (selectedSession: Session) => {
-    onSelectSession(selectedSession);
+
+  const handleSessionSelect = async (selectedSession: Session) => {
+  try {
+    // Au lieu de passer directement l'ID, passer la session complète
+    onSelectSession?.({
+      id: selectedSession.id,
+      userId: selectedSession.userId,
+      status: selectedSession.status,
+      metadata: selectedSession.metadata
+    });
     setShowSessions(false);
-  };
+  } catch (error) {
+    console.error('Erreur sélection session:', error);
+  }
+};
 
   const handleNewSession = () => {
     onNewSession();
@@ -101,7 +112,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
               sessions.map((session) => (
                 <div
                   key={session.id}
-                  onClick={() => handleSessionSelect(session.id)}
+                  onClick={() => handleSessionSelect(session)}
                   className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer 
                     ${session.id === sessionId ? 'bg-blue-50 dark:bg-blue-900' : ''}`}
                 >
