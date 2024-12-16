@@ -32,24 +32,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const {
     chat: { messages, isLoading },
     session: { currentSessionId },
-    sendMessage: storeSendMessage,
+    sendMessage: storeSendMessage
   } = useStore((state) => ({
     chat: state.chat,
     session: state.session,
-    sendMessage: state.sendMessage,
+    sendMessage: state.sendMessage
   }));
-
-  useEffect(() => {
-    if (routeSessionId && routeSessionId !== currentSessionId && !isLoading) {
-      loadSessionMessages(routeSessionId).catch(error => {
-        console.error('Erreur chargement session:', error);
-        setError('Session invalide ou expirée');
-        if (userId) {
-          navigate(`/${userId}`);
-        }
-      });
-    }
-  }, [routeSessionId, currentSessionId, userId, isLoading, navigate, loadSessionMessages]);
 
   const handleSendMessage = async (content: string) => {
     if (!userId || !routeSessionId) {
@@ -63,9 +51,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         content,
         userId,
         sessionId: routeSessionId,
+        timestamp: new Date().toISOString()
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erreur envoi message:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'envoi du message';
       setError(errorMessage);
@@ -74,11 +63,16 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(timer);
+    if (routeSessionId && routeSessionId !== currentSessionId && !isLoading) {
+      storeSendMessage("Session initialisée").catch((error: unknown) => {
+        console.error('Erreur chargement session:', error);
+        setError('Session invalide ou expirée');
+        if (userId) {
+          navigate(`/${userId}`);
+        }
+      });
     }
-  }, [error]);
+  }, [routeSessionId, currentSessionId, userId, isLoading, navigate, storeSendMessage]);
 
   const value: ChatContextValue = {
     messages,
