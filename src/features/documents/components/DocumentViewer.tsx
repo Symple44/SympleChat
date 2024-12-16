@@ -3,7 +3,7 @@
 import React from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../../../shared/hooks/useTheme';
-import type { DocumentFragment, DocumentImage } from '../types/document';
+import type { DocumentFragment } from '../types/document';
 import { APP_CONFIG } from '../../../config/app.config';
 
 interface DocumentViewerProps {
