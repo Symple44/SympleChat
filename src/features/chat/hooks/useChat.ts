@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
 import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 import type { SendMessageOptions } from '../types/chat';
+import type { WebSocketEventType } from '../../../core/socket/types';
 
 export function useChat() {
   const navigate = useNavigate();
@@ -23,18 +24,7 @@ export function useChat() {
     setError
   } = useChatStore();
 
-  const { connected, send: sendSocketMessage } = useWebSocket();
-
-  // Synchroniser avec l'ID de session de l'URL
-  useEffect(() => {
-    if (routeSessionId && routeSessionId !== currentSessionId) {
-      loadSessionMessages(routeSessionId).catch(error => {
-        console.error('Failed to load session:', error);
-        setError('Session non valide ou expirée');
-        navigate(`/${userId}`);
-      });
-    }
-  }, [routeSessionId, currentSessionId, userId, navigate, loadSessionMessages]);
+  const { isConnected, send: sendSocketMessage } = useWebSocket();
 
   const sendMessage = useCallback(async (
     content: string, 
@@ -51,15 +41,12 @@ export function useChat() {
       });
 
       // Notifier via WebSocket si connecté
-      if (connected) {
-        sendSocketMessage({
-          type: 'message',
-          payload: {
-            content,
-            userId,
-            sessionId: routeSessionId,
-            timestamp: new Date().toISOString()
-          }
+      if (isConnected) {
+        sendSocketMessage('message', {
+          content,
+          userId,
+          sessionId: routeSessionId,
+          timestamp: new Date().toISOString()
         });
       }
 
@@ -68,27 +55,15 @@ export function useChat() {
       console.error('Error sending message:', error);
       throw error;
     }
-  }, [userId, routeSessionId, connected, storeSendMessage, sendSocketMessage]);
-
-  // Nettoyage des erreurs
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError(null);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [error, setError]);
+  }, [userId, routeSessionId, isConnected, storeSendMessage, sendSocketMessage]);
 
   return {
     messages,
     isLoading,
     error,
-    connected,
+    isConnected,
     sessionId: currentSessionId,
-    sendMessage,
-    sendSocketMessage
+    sendMessage
   };
 }
 
