@@ -29,7 +29,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
   // Store actions
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const sendMessage = useStore(state => state.sendMessage);
-  const setError = useStore(state => state.setError);
 
   // WebSocket connection
   const { isConnected } = useWebSocket();
@@ -42,7 +41,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
     try {
       navigate('/');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erreur création session');
+      console.error('Erreur création session:', error);
     }
   };
 
@@ -79,7 +78,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
         <MessageList 
           messages={messages} 
           isLoading={isLoading}
-          sessionId={currentSessionId}
         />
       </div>
 
