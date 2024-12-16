@@ -1,6 +1,6 @@
 // src/features/chat/components/ChatContainer.tsx
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { useStore } from '../../../store';
@@ -19,18 +19,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
   
-  // Store selectors
   const messages = useStore(state => state.chat.messages);
   const isLoading = useStore(state => state.chat.isLoading);
   const error = useStore(state => state.chat.error);
   const currentSessionId = useStore(state => state.session.currentSessionId);
   const sessions = useStore(state => state.session.sessions);
-  
-  // Store actions
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const sendMessage = useStore(state => state.sendMessage);
-
-  // WebSocket connection
   const { isConnected } = useWebSocket();
 
   const handleSelectSession = (session: Session) => {
@@ -44,7 +39,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
       console.error('Erreur création session:', error);
     }
   };
-  
+
+  const adaptedSendMessage = useCallback(async (content: string) => {
+    if (!currentSessionId) {
+      throw new Error('No active session');
+    }
+    return sendMessage(content, currentSessionId);
+  }, [currentSessionId, sendMessage]);
 
   if (error) {
     return (
@@ -62,13 +63,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
       </div>
     );
   }
-
-  const handleSendMessage = useCallback(async (content: string) => {
-    if (!currentSessionId) {
-      throw new Error('No active session');
-    }
-    await sendMessage(content, currentSessionId);
-  }, [currentSessionId, sendMessage]);
 
   return (
     <div className={`flex flex-col h-screen ${className}`}>
@@ -90,7 +84,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
       </div>
 
       <MessageInput 
-        onSend={sendMessage}
+        onSend={adaptedSendMessage}
         isLoading={isLoading}
         disabled={!isConnected || !currentSessionId}
       />
