@@ -2,17 +2,16 @@
 
 import React, { useState } from 'react';
 import { MessageCircle, Moon, Sun, Book, BookOpen, Plus } from 'lucide-react';
-import { useStore } from '../../../store';
 import { useTheme } from '../../../shared/hooks/useTheme';
-import { Session } from '../../../core/session/types';
+import type { Session } from '../../../core/session/types';
 import { APP_CONFIG } from '../../../config/app.config';
 
 interface ChatHeaderProps {
   connected: boolean;
   sessionId: string | null;
   sessions?: Session[];
-  onSelectSession?: (session: Session) => void;  // Changé de string à Session
-  onNewSession?: () => void;
+  onSelectSession: (session: Session) => void;  // Type mis à jour
+  onNewSession: () => void;
   className?: string;
 }
 
@@ -27,24 +26,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const { isDark, toggleTheme } = useTheme();
   const [showSessions, setShowSessions] = useState(false);
   
-  const handleNewSession = async () => {
-    try {
-      onNewSession?.();
-      setShowSessions(false);
-    } catch (error) {
-      console.error('Erreur création session:', error);
-    }
+  const handleSessionSelect = (selectedSession: Session) => {
+    onSelectSession(selectedSession);
+    setShowSessions(false);
   };
 
-  const handleSessionSelect = async (sid: string) => {
-    if (!sid) return;
-    
-    try {
-      onSelectSession?.(sid);
-      setShowSessions(false);
-    } catch (error) {
-      console.error('Erreur sélection session:', error);
-    }
+  const handleNewSession = () => {
+    onNewSession();
+    setShowSessions(false);
   };
 
   return (
