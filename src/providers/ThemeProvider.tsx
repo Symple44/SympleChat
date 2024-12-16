@@ -20,29 +20,27 @@ export const useTheme = () => {
 
 interface ThemeProviderProps {
   children: React.ReactNode;
-  defaultDark?: boolean;
+  initialTheme?: boolean;
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
-  defaultDark = false
+  initialTheme
 }) => {
   const [isDark, setIsDark] = useState(() => {
-    // Récupérer la préférence stockée ou utiliser le système
+    if (typeof initialTheme === 'boolean') return initialTheme;
+    
     const stored = localStorage.getItem('theme');
-    if (stored) {
-      return stored === 'dark';
-    }
+    if (stored) return stored === 'dark';
+    
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  // Appliquer le thème au document
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // Écouter les changements de préférence système
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
@@ -65,9 +63,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 
   return (
     <ThemeContext.Provider value={value}>
-      <div className={isDark ? 'dark' : ''}>
-        {children}
-      </div>
+      {children}
     </ThemeContext.Provider>
   );
 };
