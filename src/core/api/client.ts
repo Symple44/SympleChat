@@ -1,51 +1,36 @@
 // src/core/api/client.ts
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+import { API_CONFIG } from '../../config/api.config';
 
-interface ApiError {
-  status: number;
-  message: string;
-  data?: unknown;
-}
-
-interface RequestOptions extends RequestInit {
-  method?: HttpMethod;
-  data?: unknown;
-  params?: Record<string, string>;
-}
-
-export class ApiClient {
+class ApiClient {
   private baseUrl: string;
   private defaultHeaders: HeadersInit;
 
-  constructor(baseUrl: string, defaultHeaders: HeadersInit = {}) {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl: string = '', defaultHeaders: HeadersInit = {}) {
+    // S'assurer que nous avons toujours une URL de base valide
+    this.baseUrl = baseUrl || API_CONFIG.BASE_URL;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       ...defaultHeaders
     };
   }
 
-  private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { method = 'GET', data, params, headers = {} } = options;
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const { method = 'GET', headers = {}, ...rest } = options;
 
-    // Construire l'URL avec les paramètres de requête
-    const url = new URL(`${this.baseUrl}${endpoint}`);
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, value);
-      });
-    }
+    // S'assurer que l'URL est bien formée
+    const url = endpoint.startsWith('http') 
+      ? endpoint 
+      : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await fetch(url, {
         method,
         headers: {
           ...this.defaultHeaders,
           ...headers
         },
-        body: data ? JSON.stringify(data) : undefined,
-        ...options
+        ...rest
       });
 
       if (!response.ok) {
@@ -54,7 +39,7 @@ export class ApiClient {
           status: response.status,
           message: response.statusText,
           data: errorData
-        } as ApiError;
+        };
       }
 
       return response.json();
@@ -64,25 +49,32 @@ export class ApiClient {
     }
   }
 
-  // Méthodes d'aide pour les requêtes HTTP communes
-  public async get<T>(endpoint: string, options?: Omit<RequestOptions, 'method'>) {
+  public async get<T>(endpoint: string, options?: Omit<RequestInit, 'method'>) {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  public async post<T>(endpoint: string, data?: unknown, options?: Omit<RequestOptions, 'method' | 'data'>) {
-    return this.request<T>(endpoint, { ...options, method: 'POST', data });
+  public async post<T>(endpoint: string, data?: unknown, options?: Omit<RequestInit, 'method' | 'body'>) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined
+    });
   }
 
-  public async put<T>(endpoint: string, data?: unknown, options?: Omit<RequestOptions, 'method' | 'data'>) {
-    return this.request<T>(endpoint, { ...options, method: 'PUT', data });
+  public async put<T>(endpoint: string, data?: unknown, options?: Omit<RequestInit, 'method' | 'body'>) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined
+    });
   }
 
-  public async delete<T>(endpoint: string, options?: Omit<RequestOptions, 'method'>) {
+  public async delete<T>(endpoint: string, options?: Omit<RequestInit, 'method'>) {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 }
 
-// Instance par défaut
-export const apiClient = new ApiClient(import.meta.env.VITE_API_URL || '');
+// Instance par défaut avec l'URL de base de la configuration
+export const apiClient = new ApiClient(API_CONFIG.BASE_URL);
 
 export default apiClient;
