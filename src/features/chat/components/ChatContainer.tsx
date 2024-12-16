@@ -4,12 +4,12 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { useStore } from '../../../store';
+import { useWebSocket } from '../../../core/socket/useWebSocket';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import { useTheme } from '../../../shared/hooks/useTheme';
-import { socketManager } from '../../../core/socket/socket';
-import type { Message } from '../types/chat';
+import type { Session } from '../../../core/session/types';
 
 interface ChatContainerProps {
   className?: string;
@@ -18,7 +18,7 @@ interface ChatContainerProps {
 const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
-
+  
   // Store selectors
   const messages = useStore(state => state.chat.messages);
   const isLoading = useStore(state => state.chat.isLoading);
@@ -27,80 +27,22 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
   const sessions = useStore(state => state.session.sessions);
   
   // Store actions
-  const addMessage = useStore(state => state.addMessage);
-  const setError = useStore(state => state.setError);
   const setCurrentSession = useStore(state => state.setCurrentSession);
+  const sendMessage = useStore(state => state.sendMessage);
+  const setError = useStore(state => state.setError);
 
-  // WebSocket connection handling
-  useEffect(() => {
-    const handleConnect = () => {
-      console.log('WebSocket connected');
-    };
+  // WebSocket connection
+  const { isConnected, send: sendSocketMessage } = useWebSocket();
 
-    const handleDisconnect = () => {
-      console.log('WebSocket disconnected');
-    };
-
-    const handleMessage = (message: Message) => {
-      addMessage(message);
-    };
-
-    socketManager.config.onConnect = handleConnect;
-    socketManager.config.onDisconnect = handleDisconnect;
-    socketManager.config.onMessage = handleMessage;
-
-    if (!socketManager.isConnected) {
-      socketManager.connect();
-    }
-
-    return () => {
-      socketManager.disconnect();
-    };
-  }, [addMessage]);
-
-  const handleSendMessage = async (content: string) => {
-    if (!currentSessionId) {
-      setError('Aucune session active');
-      return;
-    }
-
-    try {
-      const message: Message = {
-        id: crypto.randomUUID(),
-        content,
-        type: 'user',
-        timestamp: new Date().toISOString(),
-        sessionId: currentSessionId
-      };
-
-      addMessage(message);
-
-      // Send via WebSocket if connected
-      if (socketManager.isConnected) {
-        socketManager.send({
-          type: 'message',
-          payload: {
-            content,
-            sessionId: currentSessionId,
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur d\'envoi du message';
-      setError(errorMessage);
-      console.error('Error sending message:', err);
-    }
+  const handleSelectSession = (session: Session) => {
+    setCurrentSession(session);
   };
 
   const handleNewSession = async () => {
     try {
-      // Navigate to sessions list
       navigate('/');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur de création de session';
-      setError(errorMessage);
-      console.error('Error creating session:', err);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erreur création session');
     }
   };
 
@@ -124,10 +66,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
   return (
     <div className={`flex flex-col h-screen ${className}`}>
       <ChatHeader 
-        connected={socketManager.isConnected}
+        connected={isConnected}
         sessionId={currentSessionId}
         sessions={sessions}
-        onSelectSession={setCurrentSession}
+        onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
       />
       
@@ -142,9 +84,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
       </div>
 
       <MessageInput 
-        onSend={handleSendMessage}
+        onSend={sendMessage}
         isLoading={isLoading}
-        disabled={!socketManager.isConnected || !currentSessionId}
+        disabled={!isConnected || !currentSessionId}
       />
     </div>
   );
