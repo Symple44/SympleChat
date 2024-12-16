@@ -27,12 +27,19 @@ export interface DocumentReference {
   excerpt?: string;
 }
 
+export interface DocumentImage {
+  type: string;
+  data: string;
+  alt?: string;
+}
+
 export interface DocumentFragment {
   source: string;
   page: number;
   text: string;
   context_before?: string;
   context_after?: string;
+  images?: DocumentImage[];
 }
 
 export interface ChatState {
