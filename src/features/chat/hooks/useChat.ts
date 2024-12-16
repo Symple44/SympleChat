@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
-import { useWebSocket } from '../../../core/socket/socket';
+import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 import type { SendMessageOptions } from '../types/chat';
 
 export function useChat() {
