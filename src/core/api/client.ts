@@ -1,36 +1,41 @@
 // src/core/api/client.ts
 
-import { API_CONFIG } from '../../config/api.config';
+interface RequestOptions extends Omit<RequestInit, 'method'> {
+  params?: Record<string, string>;
+}
 
-class ApiClient {
+export class ApiClient {
   private baseUrl: string;
   private defaultHeaders: HeadersInit;
 
   constructor(baseUrl: string = '', defaultHeaders: HeadersInit = {}) {
-    // S'assurer que nous avons toujours une URL de base valide
-    this.baseUrl = baseUrl || API_CONFIG.BASE_URL;
+    this.baseUrl = baseUrl || '/api';
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       ...defaultHeaders
     };
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const { method = 'GET', headers = {}, ...rest } = options;
+  private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+    const { params, ...requestInit } = options;
 
-    // S'assurer que l'URL est bien formée
-    const url = endpoint.startsWith('http') 
-      ? endpoint 
-      : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    // Construire l'URL avec les paramètres de requête
+    const url = new URL(endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          url.searchParams.append(key, value);
+        }
+      });
+    }
 
     try {
-      const response = await fetch(url, {
-        method,
+      const response = await fetch(url.toString(), {
+        ...requestInit,
         headers: {
           ...this.defaultHeaders,
-          ...headers
-        },
-        ...rest
+          ...requestInit.headers
+        }
       });
 
       if (!response.ok) {
@@ -49,11 +54,15 @@ class ApiClient {
     }
   }
 
-  public async get<T>(endpoint: string, options?: Omit<RequestInit, 'method'>) {
+  public async get<T>(endpoint: string, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  public async post<T>(endpoint: string, data?: unknown, options?: Omit<RequestInit, 'method' | 'body'>) {
+  public async post<T>(
+    endpoint: string, 
+    data?: unknown, 
+    options?: Omit<RequestOptions, 'body'>
+  ) {
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
@@ -61,7 +70,11 @@ class ApiClient {
     });
   }
 
-  public async put<T>(endpoint: string, data?: unknown, options?: Omit<RequestInit, 'method' | 'body'>) {
+  public async put<T>(
+    endpoint: string, 
+    data?: unknown, 
+    options?: Omit<RequestOptions, 'body'>
+  ) {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
@@ -69,12 +82,12 @@ class ApiClient {
     });
   }
 
-  public async delete<T>(endpoint: string, options?: Omit<RequestInit, 'method'>) {
+  public async delete<T>(endpoint: string, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 }
 
-// Instance par défaut avec l'URL de base de la configuration
-export const apiClient = new ApiClient(API_CONFIG.BASE_URL);
+// Instance par défaut
+export const apiClient = new ApiClient();
 
 export default apiClient;
