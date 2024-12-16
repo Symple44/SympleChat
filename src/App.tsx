@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useParams, Outlet } from 'react-router-dom';
 import { useStore } from './store';
-import { useWebSocket } from './core/socket/socket';
+import { useWebSocket } from '../../../core/socket/useWebSocket';
 import { updatePageTitle } from './shared/utils/pageTitle';
 import { APP_CONFIG } from './config/app.config';
 
