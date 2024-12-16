@@ -1,6 +1,6 @@
 // /src/providers/ChatProvider.tsx
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { useSocket } from './SocketProvider';
@@ -33,19 +33,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     chat: { messages, isLoading },
     session: { currentSessionId },
     sendMessage: storeSendMessage
-  } = useStore((state) => ({
+  } = useStore(state => ({
     chat: state.chat,
     session: state.session,
     sendMessage: state.sendMessage
   }));
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string) => {
     if (!userId || !routeSessionId) {
       throw new Error('Session invalide');
     }
 
     try {
-      await storeSendMessage(content);
+      await storeSendMessage(content, routeSessionId);
       
       send('message', {
         content,
@@ -60,11 +60,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setError(errorMessage);
       throw error;
     }
-  };
+  }, [userId, routeSessionId, storeSendMessage, send]);
 
   useEffect(() => {
     if (routeSessionId && routeSessionId !== currentSessionId && !isLoading) {
-      storeSendMessage("Session initialisée").catch((error: unknown) => {
+      storeSendMessage("Session initialisée", routeSessionId).catch((error: unknown) => {
         console.error('Erreur chargement session:', error);
         setError('Session invalide ou expirée');
         if (userId) {
@@ -74,7 +74,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, [routeSessionId, currentSessionId, userId, isLoading, navigate, storeSendMessage]);
 
-  const value: ChatContextValue = {
+  const value = {
     messages,
     isLoading,
     error,
