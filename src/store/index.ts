@@ -33,10 +33,8 @@ interface StoreActions {
   loadSessionMessages: (sessionId: string) => Promise<void>;
   
   // Session actions
-  setSessions: (
-    sessions: Session[] | ((prev: Session[]) => Session[])
-  ) => void;
   setCurrentSession: (session: Session) => void;
+  setSessions: (sessions: Session[] | ((prev: Session[]) => Session[])) => void;
   
   // UI actions
   setTheme: (isDark: boolean) => void;
@@ -71,24 +69,11 @@ export const useStore = create<StoreState & StoreActions>()(
     (set) => ({
       ...initialState,
 
-      sendMessage: async (content: string, sessionId: string) => {
+      sendMessage: async (content, sessionId) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          const newMessage: Message = {
-            id: crypto.randomUUID(),
-            content,
-            type: 'user',
-            timestamp: new Date().toISOString(),
-            sessionId
-          };
-
-          set(state => ({
-            chat: {
-              ...state.chat,
-              messages: [...state.chat.messages, newMessage],
-              isLoading: false
-            }
-          }));
+          // Implémentation à venir
+          set(state => ({ chat: { ...state.chat, isLoading: false } }));
         } catch (error) {
           set(state => ({ 
             chat: { 
@@ -100,7 +85,7 @@ export const useStore = create<StoreState & StoreActions>()(
           throw error;
         }
       },
-
+      
       setMessages: (messages) => set(state => ({
         chat: { ...state.chat, messages }
       })),
@@ -116,22 +101,11 @@ export const useStore = create<StoreState & StoreActions>()(
         chat: { ...state.chat, messages: [] }
       })),
 
-      loadSessionMessages: async (sessionId: string) => {
+      loadSessionMessages: async (sessionId) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          // Simulation d'un appel API
-          const messages: Message[] = [];
-          set(state => ({ 
-            chat: { 
-              ...state.chat, 
-              messages, 
-              isLoading: false 
-            },
-            session: {
-              ...state.session,
-              currentSessionId: sessionId
-            }
-          }));
+          // Implémentation à venir
+          set(state => ({ chat: { ...state.chat, isLoading: false } }));
         } catch (error) {
           set(state => ({ 
             chat: { 
@@ -145,21 +119,20 @@ export const useStore = create<StoreState & StoreActions>()(
       },
 
       setCurrentSession: (session) => set(state => ({
-        session: { 
-          ...state.session, 
-          currentSessionId: session.id 
-        }
+        session: { ...state.session, currentSessionId: session.id }
       })),
 
-      setSessions: (sessions) => set(state => ({
-        session: { ...state.session, sessions }
+      setSessions: (sessionsOrUpdater) => set(state => ({
+        session: {
+          ...state.session,
+          sessions: typeof sessionsOrUpdater === 'function'
+            ? sessionsOrUpdater(state.session.sessions)
+            : sessionsOrUpdater
+        }
       })),
 
       setTheme: (isDark) => set(state => ({
-        ui: { 
-          ...state.ui, 
-          theme: isDark ? 'dark' : 'light' 
-        }
+        ui: { ...state.ui, theme: isDark ? 'dark' : 'light' }
       })),
 
       setError: (error) => set(state => ({
