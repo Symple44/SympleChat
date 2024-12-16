@@ -5,15 +5,23 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../../../core/api/client';
 import { API_ENDPOINTS } from '../../../core/api/endpoints';
 
-interface Session {
-  session_id: string;
+interface SessionData {
+  id: string;
   timestamp: string;
-  first_message: string;
-  message_count: number;
+  title: string;
+  messageCount: number;
+  userId: string;
+  status: 'active' | 'archived' | 'deleted';
+  metadata: {
+    createdAt: string;
+    updatedAt: string;
+    title?: string;
+    messageCount: number;
+  };
 }
 
 interface UseSessionNavReturn {
-  sessions: Session[];
+  sessions: SessionData[];
   currentSessionId: string | null;
   isLoading: boolean;
   error: string | null;
@@ -28,19 +36,35 @@ export function useSessionNav(): UseSessionNavReturn {
     userId: string;
     sessionId: string;
   }>();
-  
-  const [sessions, setSessions] = useState<Session[]>([]);
+
+  const [sessions, setSessions] = useState<SessionData[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const formatSessionData = (msg: Session) => ({
-  session_id: msg.id,
-  timestamp: msg.metadata.createdAt,
-  first_message: msg.metadata.title || "Nouvelle conversation",
-  message_count: msg.metadata.messageCount
-  });
-  
+  const processSessionData = useCallback((sessions: SessionData[]) => {
+    return sessions.reduce<Record<string, SessionData>>((acc, session) => {
+      const sessionId = session.id;
+      if (!acc[sessionId]) {
+        acc[sessionId] = {
+          id: sessionId,
+          userId: session.userId,
+          timestamp: session.metadata.createdAt,
+          title: session.metadata.title || "Nouvelle conversation",
+          messageCount: session.metadata.messageCount,
+          status: session.status,
+          metadata: session.metadata
+        };
+      } else {
+        acc[sessionId].messageCount = session.metadata.messageCount;
+        if (new Date(session.metadata.updatedAt) > new Date(acc[sessionId].timestamp)) {
+          acc[sessionId].timestamp = session.metadata.updatedAt;
+        }
+      }
+      return acc;
+    }, {});
+  }, []);
+
   const loadSessions = useCallback(async () => {
     if (!userId) return;
 
@@ -48,41 +72,21 @@ export function useSessionNav(): UseSessionNavReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await apiClient.get<Session[]>(
+      const response = await apiClient.get<SessionData[]>(
         API_ENDPOINTS.USER.HISTORY(userId)
       );
 
-      // Grouper les messages par session et extraire les informations pertinentes
-      const sessionMap = response.reduce<Record<string, Session>>((acc, msg) => {
-        const sessionData = formatSessionData(msg);
-        if (!acc[sessionId]) {
-          acc[sessionId] = {
-            session_id: sessionId,
-            timestamp: msg.timestamp,
-            first_message: msg.query || "Nouvelle conversation",
-            message_count: 1
-          };
-        } else {
-          acc[sessionId].message_count++;
-          if (new Date(msg.timestamp) > new Date(acc[sessionId].timestamp)) {
-            acc[sessionId].timestamp = msg.timestamp;
-          }
-        }
-        return acc;
-      }, {});
-
-      // Convertir en tableau et trier par date décroissante
-      const sortedSessions = Object.values(sessionMap).sort(
+      const processedSessions = processSessionData(response);
+      const sortedSessions = Object.values(processedSessions).sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 
       setSessions(sortedSessions);
 
-      // Si pas de session active dans l'URL et qu'il y a des sessions existantes
       if (!routeSessionId && sortedSessions.length > 0) {
         const latestSession = sortedSessions[0];
-        setCurrentSessionId(latestSession.session_id);
-        navigate(`/${userId}/session/${latestSession.session_id}`);
+        setCurrentSessionId(latestSession.id);
+        navigate(`/${userId}/session/${latestSession.id}`);
       }
 
     } catch (err) {
@@ -92,7 +96,7 @@ export function useSessionNav(): UseSessionNavReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, routeSessionId, navigate]);
+  }, [userId, routeSessionId, navigate, processSessionData]);
 
   const createNewSession = async (): Promise<string> => {
     if (!userId) {
@@ -105,14 +109,13 @@ export function useSessionNav(): UseSessionNavReturn {
 
       const response = await apiClient.post<{ session_id: string }>(
         API_ENDPOINTS.SESSION.CREATE,
-        { user_id: userId }
+        { userId }
       );
 
       const newSessionId = response.session_id;
       setCurrentSessionId(newSessionId);
       navigate(`/${userId}/session/${newSessionId}`);
 
-      // Recharger les sessions pour inclure la nouvelle
       await loadSessions();
 
       return newSessionId;
@@ -133,8 +136,7 @@ export function useSessionNav(): UseSessionNavReturn {
       setIsLoading(true);
       setError(null);
       
-      // Vérifier que la session existe
-      const sessionExists = sessions.some(s => s.session_id === sessionId);
+      const sessionExists = sessions.some(s => s.id === sessionId);
       if (!sessionExists) {
         throw new Error('Session invalide');
       }
@@ -151,19 +153,17 @@ export function useSessionNav(): UseSessionNavReturn {
     }
   };
 
-  // Initialisation et synchronisation avec l'URL
   useEffect(() => {
     if (userId) {
-      loadSessions();
+      void loadSessions();
     }
   }, [userId, loadSessions]);
 
-  // Synchronisation avec le sessionId de l'URL
   useEffect(() => {
     if (routeSessionId && routeSessionId !== currentSessionId) {
       setCurrentSessionId(routeSessionId);
     }
-  }, [routeSessionId]);
+  }, [routeSessionId, currentSessionId]);
 
   return {
     sessions,
