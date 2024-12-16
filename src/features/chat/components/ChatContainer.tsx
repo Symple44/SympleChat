@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { useStore } from '../../../store';
-import { useWebSocket } from '../../../core/socket/useWebSocket';
+import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
