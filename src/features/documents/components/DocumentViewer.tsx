@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useStore } from '../../../store';
-import { DocumentFragment } from '../../../features/chat/types/chat';
+import { useTheme } from '../../../shared/hooks/useTheme';
+import type { DocumentFragment, DocumentImage } from '../types/document';
 import { APP_CONFIG } from '../../../config/app.config';
 
 interface DocumentViewerProps {
@@ -19,19 +19,38 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   onNavigate,
   className = ''
 }) => {
-  const theme = useStore(state => state.ui.theme);
+  const { isDark } = useTheme();
+
+  const hasImages = Boolean(document.images && document.images.length > 0);
+
+  const renderImages = (images: DocumentImage[]) => (
+    <div className="flex justify-between items-start mb-8">
+      {images.map((image, index) => (
+        <div 
+          key={index} 
+          className={`p-2 rounded-lg ${isDark ? 'bg-gray-900' : 'bg-white'} shadow-sm`}
+        >
+          <img
+            src={`data:image/${image.type};base64,${image.data}`}
+            alt={image.alt || 'Document image'}
+            className="h-12 object-contain"
+          />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className={`
       absolute inset-x-0 top-[64px] bottom-[76px] z-50 
       overflow-auto shadow-lg 
-      ${theme === 'dark' ? 'bg-gray-800' : 'bg-blue-50'}
+      ${isDark ? 'bg-gray-800' : 'bg-blue-50'}
       ${className}
     `}>
-      {/* Header */}
+      {/* Header section */}
       <div className={`
         sticky top-0 
-        ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-blue-100 border-blue-200'}
+        ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-blue-100 border-blue-200'}
         border-b px-4 py-2 flex justify-between items-center
       `}>
         <div className="flex-1">
@@ -95,30 +114,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
       {/* Content */}
       <div className="p-8">
-        {APP_CONFIG.UI.SHOW_DOCUMENT_IMAGES && document.images?.length > 0 && (
-          <div className="flex justify-between items-start mb-8">
-            {document.images.map((image, index) => (
-              <div key={index} className={`
-                p-2 rounded-lg ${
-                  theme === 'dark' ? 'bg-gray-900' : 'bg-white'
-                } shadow-sm
-              `}>
-                <img
-                  src={`data:image/${image.type};base64,${image.data}`}
-                  alt={image.alt || 'Document image'}
-                  className="h-12 object-contain"
-                />
-              </div>
-            ))}
-          </div>
+        {APP_CONFIG.UI.SHOW_DOCUMENT_IMAGES && hasImages && document.images && (
+          renderImages(document.images)
         )}
 
         {/* Document content */}
         {document.context_before && (
           <div className={`pb-4 border-b ${
-            theme === 'dark' 
-              ? 'text-blue-300 border-gray-700' 
-              : 'text-blue-700 border-blue-100'
+            isDark ? 'text-blue-300 border-gray-700' : 'text-blue-700 border-blue-100'
           }`}>
             {document.context_before.split('\n').map((line, i) => (
               line.trim() && <p key={i} className="mb-2">{line}</p>
