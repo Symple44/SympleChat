@@ -1,11 +1,13 @@
 // src/components/chat/SessionList.tsx
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, MessageSquare, Loader2, Archive } from 'lucide-react';
 import { useStore } from '../../../store';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { formatRelativeTime } from '../../../shared/utils/dateFormatter';
+import { apiClient } from '../../../core/api/client';
+import { API_ENDPOINTS } from '../../../core/api/endpoints';
 import type { Session } from '../../../core/session/types';
 
 interface SessionListProps {
@@ -14,26 +16,62 @@ interface SessionListProps {
 
 const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   const navigate = useNavigate();
+  const { userId } = useParams<{ userId: string }>();
   const { isDark } = useTheme();
-  const [listError, setListError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const sessions = useStore(state => state.session.sessions);
-  const currentSessionId = useStore(state => state.session.currentSessionId);
-  const isLoading = useStore(state => state.session.isLoading);
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const setSessions = useStore(state => state.setSessions);
 
   const fetchSessions = useCallback(async () => {
+    if (!userId) return;
+
     try {
-      const response = await fetch('/api/sessions');
-      const data = await response.json();
-      setSessions(data);
-      setListError(null);
-    } catch (error: unknown) {
-      console.error('Erreur chargement sessions:', error);
-      setListError(error instanceof Error ? error.message : 'Erreur de chargement');
+      setIsLoading(true);
+      const response = await apiClient.get<Session[]>(
+        API_ENDPOINTS.USER.SESSIONS(userId)
+      );
+      setSessions(response);
+      setError(null);
+    } catch (err) {
+      console.error('Erreur chargement sessions:', err);
+      setError('Impossible de charger les sessions');
+    } finally {
+      setIsLoading(false);
     }
-  }, [setSessions]);
+  }, [userId, setSessions]);
+
+  const handleNewSession = async () => {
+    if (!userId) return;
+
+    try {
+      setIsLoading(true);
+      const response = await apiClient.post<Session>(API_ENDPOINTS.SESSION.CREATE, {
+        userId
+      });
+      
+      setSessions([response, ...sessions]);
+      setCurrentSession(response);
+      navigate(`/${userId}/session/${response.id}`);
+    } catch (err) {
+      console.error('Erreur création session:', err);
+      setError('Impossible de créer une nouvelle session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSessionSelect = async (session: Session) => {
+    try {
+      setCurrentSession(session);
+      navigate(`/${userId}/session/${session.id}`);
+    } catch (err) {
+      console.error('Erreur sélection session:', err);
+      setError('Impossible de sélectionner cette session');
+    }
+  };
 
   useEffect(() => {
     void fetchSessions();
