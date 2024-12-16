@@ -33,8 +33,10 @@ interface StoreActions {
   loadSessionMessages: (sessionId: string) => Promise<void>;
   
   // Session actions
+  setSessions: (
+    sessions: Session[] | ((prev: Session[]) => Session[])
+  ) => void;
   setCurrentSession: (session: Session) => void;
-  setSessions: (sessions: Session[]) => void;
   
   // UI actions
   setTheme: (isDark: boolean) => void;
