@@ -1,6 +1,6 @@
 // src/core/api/client.ts
 
-interface RequestOptions extends Omit<RequestInit, 'method'> {
+interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
 }
 
@@ -17,13 +17,13 @@ export class ApiClient {
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { params, ...requestInit } = options;
+    const { params, headers, ...requestInit } = options;
 
     // Construire l'URL avec les paramètres de requête
     const url = new URL(endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
+        if (value !== undefined && value !== null) {
           url.searchParams.append(key, value);
         }
       });
@@ -34,7 +34,7 @@ export class ApiClient {
         ...requestInit,
         headers: {
           ...this.defaultHeaders,
-          ...requestInit.headers
+          ...headers
         }
       });
 
@@ -54,14 +54,17 @@ export class ApiClient {
     }
   }
 
-  public async get<T>(endpoint: string, options?: RequestOptions) {
-    return this.request<T>(endpoint, { ...options, method: 'GET' });
+  public async get<T>(endpoint: string, options?: Omit<RequestOptions, 'body' | 'method'>) {
+    return this.request<T>(endpoint, { 
+      ...options, 
+      method: 'GET' 
+    });
   }
 
   public async post<T>(
     endpoint: string, 
     data?: unknown, 
-    options?: Omit<RequestOptions, 'body'>
+    options?: Omit<RequestOptions, 'body' | 'method'>
   ) {
     return this.request<T>(endpoint, {
       ...options,
@@ -73,7 +76,7 @@ export class ApiClient {
   public async put<T>(
     endpoint: string, 
     data?: unknown, 
-    options?: Omit<RequestOptions, 'body'>
+    options?: Omit<RequestOptions, 'body' | 'method'>
   ) {
     return this.request<T>(endpoint, {
       ...options,
@@ -82,8 +85,11 @@ export class ApiClient {
     });
   }
 
-  public async delete<T>(endpoint: string, options?: RequestOptions) {
-    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+  public async delete<T>(endpoint: string, options?: Omit<RequestOptions, 'body' | 'method'>) {
+    return this.request<T>(endpoint, { 
+      ...options, 
+      method: 'DELETE' 
+    });
   }
 }
 
