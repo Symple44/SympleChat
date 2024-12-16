@@ -5,7 +5,7 @@ import { useNavigate, useParams, Outlet } from 'react-router-dom';
 import { useStore } from './store';
 import { useWebSocket } from './shared/hooks/useWebSocket';
 import { updatePageTitle } from './shared/utils/pageTitle';
-import { APP_CONFIG } from './config/app.config';
+//import { APP_CONFIG } from './config/app.config';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
