@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot } from 'lucide-react';
-import { useStore } from '../../../store';
 import DocumentPreview from '../../documents/components/DocumentPreview';
 import DocumentViewer from '../../documents/components/DocumentViewer';
 import { useTheme } from '../../../shared/hooks/useTheme';
@@ -27,19 +26,18 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const formatDate = (timestamp: string): string => {
+  const formatDate = useCallback((timestamp: string): string => {
     return new Intl.DateTimeFormat('fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit'
     }).format(new Date(timestamp));
-  };
+  }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
-  // Initial scroll and new messages
   useEffect(() => {
     if (!hasScrolledToBottom) {
       scrollToBottom('auto');
@@ -49,7 +47,6 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [messages, hasScrolledToBottom, scrollToBottom]);
 
-  // Scroll position detection
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
     
@@ -68,7 +65,6 @@ const MessageList: React.FC<MessageListProps> = ({
         {messages.map((msg) => (
           <div key={msg.id} className="mb-3">
             {msg.type === 'user' ? (
-              // User message
               <div className="flex justify-end">
                 <div className="max-w-[80%]">
                   <div className="bg-blue-500/90 text-white rounded-xl px-4 py-2">
@@ -80,7 +76,6 @@ const MessageList: React.FC<MessageListProps> = ({
                 </div>
               </div>
             ) : (
-              // Assistant message
               <div className="flex items-start">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-indigo-500 to-blue-600">
                   <Bot size={16} className="text-white" />
@@ -125,17 +120,6 @@ const MessageList: React.FC<MessageListProps> = ({
         )}
         
         <div ref={messagesEndRef} />
-      </div>
-
-      {/* Session info */}
-      <div className="fixed bottom-16 right-4">
-        <div className={`px-3 py-1 rounded-lg text-xs font-mono shadow-sm ${
-          isDark 
-            ? 'bg-gray-800 text-gray-300 border border-gray-700' 
-            : 'bg-white text-gray-600 border border-gray-200'
-        }`}>
-          <span>Session: {sessionId || 'Aucune'}</span>
-        </div>
       </div>
 
       {selectedDocument && (
