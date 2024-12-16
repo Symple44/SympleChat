@@ -26,14 +26,14 @@ export function useMessages(): UseMessagesReturn {
 
   try {
     const lastMessageId = store.messages[0]?.id;
-    const response = await apiClient.get<Message[]>(API_ENDPOINTS.CHAT.HISTORY, {
-      params: {
-        sessionId,
-        userId,
-        before: lastMessageId,
-        limit: '20'
-      }
-    });
+    cconst response = await apiClient.get<Message[]>(
+  API_ENDPOINTS.SESSION.HISTORY(sessionId), {
+    params: {
+      userId,
+      limit: '20'
+    }
+  }
+);
 
     if (response.length > 0) {
       store.setMessages([...response, ...store.messages]);
