@@ -9,17 +9,17 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-export interface PaginationParams {
-  page: number;
-  limit: number;
-  total?: number;
-}
-
-export interface ErrorResponse {
+export interface ApiError {
   status: number;
   message: string;
   code?: string;
   details?: unknown;
+}
+
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  total?: number;
 }
 
 export interface BaseEntity {
@@ -28,7 +28,8 @@ export interface BaseEntity {
   updatedAt: string;
 }
 
-export interface User extends BaseEntity {
+export interface User {
+  id: string;
   name?: string;
   email?: string;
   preferences?: UserPreferences;
@@ -61,3 +62,18 @@ export interface FormField<T = string> {
 export type FormFields<T> = {
   [K in keyof T]: FormField<T[K]>;
 };
+
+export interface SuccessResponse<T> {
+  success: true;
+  data: T;
+  message?: string;
+}
+
+export interface ErrorResponse {
+  success: false;
+  error: string;
+  code?: string;
+  details?: unknown;
+}
+
+export type ApiResult<T> = SuccessResponse<T> | ErrorResponse;
