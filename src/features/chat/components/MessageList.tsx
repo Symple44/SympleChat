@@ -5,19 +5,18 @@ import { Bot } from 'lucide-react';
 import DocumentPreview from '../../documents/components/DocumentPreview';
 import DocumentViewer from '../../documents/components/DocumentViewer';
 import { useTheme } from '../../../shared/hooks/useTheme';
-import type { Message, DocumentFragment } from '../types/chat';
+import type { Message } from '../types/chat';
+import type { DocumentFragment } from '../../documents/types/document';
 
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
-  //sessionId: string | null;
   className?: string;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
   messages,
   isLoading,
-  sessionId,
   className = ''
 }) => {
   const [selectedDocument, setSelectedDocument] = useState<DocumentFragment | null>(null);
