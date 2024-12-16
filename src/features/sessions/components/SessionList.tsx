@@ -62,7 +62,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
       });
       
       if (response) {
-        setSessions(prevSessions => [response, ...(prevSessions || [])]);
+        setSessions((prevSessions: Session[]) => [response, ...prevSessions]);
         setCurrentSession(response);
         navigate(`/${userId}/session/${response.id}`);
       }
