@@ -2,12 +2,11 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MessageSquare, Loader2, Archive } from 'lucide-react';
+import { Plus, MessageSquare, Loader2 } from 'lucide-react';
 import { useStore } from '../../../store';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { formatRelativeTime } from '../../../shared/utils/dateFormatter';
 import type { Session } from '../../../core/session/types';
-import { ROUTES } from '../../../config/routes.config';
 
 interface SessionListProps {
   className?: string;
@@ -21,25 +20,29 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   const sessions = useStore(state => state.session.sessions);
   const currentSessionId = useStore(state => state.session.currentSessionId);
   const isLoading = useStore(state => state.session.isLoading);
-  const error = useStore(state => state.session.error);
-  
-  // Store actions
-  const loadSessions = useStore(state => state.loadSessions);
   const setCurrentSession = useStore(state => state.setCurrentSession);
-  const createNewSession = useStore(state => state.createNewSession);
+  const setSessions = useStore(state => state.setSessions);
 
   // Charger les sessions au montage
   useEffect(() => {
-    loadSessions().catch(error => {
-      console.error('Erreur chargement sessions:', error);
-    });
-  }, [loadSessions]);
+    const fetchSessions = async () => {
+      try {
+        const response = await fetch('/api/sessions');
+        const data = await response.json();
+        setSessions(data);
+      } catch (error: unknown) {
+        console.error('Erreur chargement sessions:', error);
+      }
+    };
+
+    void fetchSessions();
+  }, [setSessions]);
 
   // Gestionnaires d'événements
   const handleSessionSelect = async (session: Session) => {
     try {
       await setCurrentSession(session);
-      navigate(ROUTES.helpers.getSessionPath(session.userId, session.id));
+      navigate(`/session/${session.id}`);
     } catch (error) {
       console.error('Erreur sélection session:', error);
     }
@@ -47,15 +50,14 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
   const handleNewSession = async () => {
     try {
-      const newSession = await createNewSession();
-      if (newSession) {
-        navigate(ROUTES.helpers.getSessionPath(newSession.userId, newSession.id));
-      }
+      const response = await fetch('/api/sessions', { method: 'POST' });
+      const newSession = await response.json();
+      setSessions([...sessions, newSession]);
+      navigate(`/session/${newSession.id}`);
     } catch (error) {
       console.error('Erreur création session:', error);
     }
   };
-
   // Affichage du loader
   if (isLoading) {
     return (
