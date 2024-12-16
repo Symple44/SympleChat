@@ -1,14 +1,12 @@
 // src/features/chat/hooks/useChat.ts
 
-import { useCallback, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
 import { useWebSocket } from '../../../shared/hooks/useWebSocket';
 import type { SendMessageOptions } from '../types/chat';
-import type { WebSocketEventType } from '../../../core/socket/types';
 
 export function useChat() {
-  const navigate = useNavigate();
   const { userId, sessionId: routeSessionId } = useParams<{ 
     userId: string; 
     sessionId: string; 
@@ -20,8 +18,6 @@ export function useChat() {
     error,
     currentSessionId,
     sendMessage: storeSendMessage,
-    loadSessionMessages,
-    setError
   } = useChatStore();
 
   const { isConnected, send: sendSocketMessage } = useWebSocket();
@@ -30,8 +26,8 @@ export function useChat() {
     content: string, 
     options?: SendMessageOptions
   ) => {
-    if (!userId) {
-      throw new Error('User ID is required');
+    if (!userId || !routeSessionId) {
+      throw new Error('User ID and Session ID are required');
     }
 
     try {
@@ -40,7 +36,6 @@ export function useChat() {
         sessionId: routeSessionId
       });
 
-      // Notifier via WebSocket si connecté
       if (isConnected) {
         sendSocketMessage('message', {
           content,
@@ -66,5 +61,3 @@ export function useChat() {
     sendMessage
   };
 }
-
-export default useChat;
