@@ -1,23 +1,23 @@
 // src/providers/SocketProvider.tsx
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 import { useWebSocket } from '../shared/hooks/useWebSocket';
-import type { WebSocketMessage } from '../core/socket/types';
+import type { 
+  WebSocketEventType, 
+  WebSocketMessage, 
+  WebSocketPayload 
+} from '../core/socket/types';
+import { API_CONFIG } from '../config/api.config';
 
 interface SocketContextValue {
   isConnected: boolean;
-  lastMessage: WebSocketMessage | null;
   error: Error | null;
-  send: (message: unknown) => boolean;
+  send: <T extends WebSocketEventType>(type: T, payload: WebSocketPayload<T>) => boolean;
   connect: () => void;
   disconnect: () => void;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
-
-interface SocketProviderProps {
-  children: React.ReactNode;
-}
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
@@ -27,35 +27,39 @@ export const useSocket = () => {
   return context;
 };
 
+interface SocketProviderProps {
+  children: React.ReactNode;
+}
+
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const { isConnected, error, send, connect, disconnect } = useWebSocket();
+  const { 
+    isConnected, 
+    error, 
+    send, 
+    connect, 
+    disconnect 
+  } = useWebSocket({
+    url: API_CONFIG.WS_URL,
+    autoReconnect: true,
+    reconnectAttempts: 5,
+    reconnectDelay: 3000,
+    debug: process.env.NODE_ENV === 'development'
+  });
 
-  useEffect(() => {
-    // Connexion initiale
-    if (!isConnected) {
-      connect();
-    }
-
-    // Nettoyage lors du démontage
-    return () => {
-      disconnect();
-    };
-  }, [isConnected, connect, disconnect]);
-
-  // Gestion des messages
-  const handleSend = (message: unknown): boolean => {
+  const handleSend = <T extends WebSocketEventType>(
+    type: T,
+    payload: WebSocketPayload<T>
+  ): boolean => {
     try {
-      return send(message);
+      return send(type, payload);
     } catch (error) {
-      console.error('Erreur envoi message socket:', error);
+      console.error('Error sending WebSocket message:', error);
       return false;
     }
   };
 
   const value: SocketContextValue = {
     isConnected,
-    lastMessage,
     error,
     send: handleSend,
     connect,
@@ -69,10 +73,40 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg">
           <p className="font-bold">Erreur de connexion</p>
           <p>{error.message}</p>
+          <button 
+            onClick={connect}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          >
+            Reconnecter
+          </button>
         </div>
       )}
     </SocketContext.Provider>
   );
+};
+
+// Composant HOC pour garantir la connexion WebSocket
+export const withSocketConnection = <P extends object>(
+  WrappedComponent: React.ComponentType<P>
+) => {
+  return function WithSocketConnection(props: P) {
+    const { isConnected } = useSocket();
+
+    if (!isConnected) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">
+              Connection au serveur...
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return <WrappedComponent {...props} />;
+  };
 };
 
 export default SocketProvider;
