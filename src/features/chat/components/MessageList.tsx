@@ -10,7 +10,7 @@ import type { Message, DocumentFragment } from '../types/chat';
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
-  sessionId: string | null;
+  //sessionId: string | null;
   className?: string;
 }
 
