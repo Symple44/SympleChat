@@ -1,5 +1,11 @@
 // src/config/routes.config.ts
 
+import { Navigate } from 'react-router-dom';
+import React from 'react';
+import App from '../App';
+import SessionList from '../features/sessions/components/SessionList';
+import ChatContainer from '../features/chat/components/ChatContainer';
+
 export const ROUTES = {
   HOME: '/',
   USER: '/:userId',
@@ -12,7 +18,13 @@ export const ROUTES = {
   }
 } as const;
 
-export function createRouteConfig(router: any) {
+interface RouteConfig {
+  path: string;
+  element: React.ReactNode;
+  children?: RouteConfig[];
+}
+
+export const createRouteConfig = (): RouteConfig[] => {
   return [
     {
       path: ROUTES.HOME,
@@ -23,7 +35,7 @@ export function createRouteConfig(router: any) {
       element: <App />,
       children: [
         {
-          index: true,
+          path: '',
           element: <SessionList />
         },
         {
@@ -37,6 +49,6 @@ export function createRouteConfig(router: any) {
       element: <Navigate to={ROUTES.HOME} replace />
     }
   ];
-}
+};
 
 export default ROUTES;
