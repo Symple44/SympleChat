@@ -28,12 +28,19 @@ export function useSessionNav(): UseSessionNavReturn {
     userId: string;
     sessionId: string;
   }>();
-
+  
   const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const formatSessionData = (msg: Session) => ({
+  session_id: msg.id,
+  timestamp: msg.metadata.createdAt,
+  first_message: msg.metadata.title || "Nouvelle conversation",
+  message_count: msg.metadata.messageCount
+  });
+  
   const loadSessions = useCallback(async () => {
     if (!userId) return;
 
@@ -47,7 +54,7 @@ export function useSessionNav(): UseSessionNavReturn {
 
       // Grouper les messages par session et extraire les informations pertinentes
       const sessionMap = response.reduce<Record<string, Session>>((acc, msg) => {
-        const sessionId = msg.session_id;
+        const sessionData = formatSessionData(msg);
         if (!acc[sessionId]) {
           acc[sessionId] = {
             session_id: sessionId,
