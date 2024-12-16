@@ -1,8 +1,8 @@
 // src/components/chat/SessionList.tsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MessageSquare, Loader2 } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Archive } from 'lucide-react';
 import { useStore } from '../../../store';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { formatRelativeTime } from '../../../shared/utils/dateFormatter';
@@ -15,15 +15,14 @@ interface SessionListProps {
 const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const [listError, setListError] = useState<string | null>(null);
   
-  // Store selectors
   const sessions = useStore(state => state.session.sessions);
   const currentSessionId = useStore(state => state.session.currentSessionId);
   const isLoading = useStore(state => state.session.isLoading);
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const setSessions = useStore(state => state.setSessions);
 
-  // Charger les sessions au montage
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -32,13 +31,13 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         setSessions(data);
       } catch (error: unknown) {
         console.error('Erreur chargement sessions:', error);
+        setListError(error instanceof Error ? error.message : 'Erreur de chargement');
       }
     };
 
     void fetchSessions();
   }, [setSessions]);
 
-  // Gestionnaires d'événements
   const handleSessionSelect = async (session: Session) => {
     try {
       await setCurrentSession(session);
@@ -58,7 +57,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
       console.error('Erreur création session:', error);
     }
   };
-  // Affichage du loader
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -67,14 +66,16 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
     );
   }
 
-  // Affichage de l'erreur
-  if (error) {
+  if (listError) {
     return (
       <div className="max-w-2xl mx-auto p-4 text-center">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-red-600 dark:text-red-400">{listError}</p>
           <button
-            onClick={() => loadSessions()}
+            onClick={() => {
+              setListError(null);
+              void fetchSessions();
+            }}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             Réessayer
