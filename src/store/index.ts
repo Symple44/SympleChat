@@ -72,19 +72,20 @@ export const useStore = create<StoreState & StoreActions>()(
       ...initialState,
 
       // Chat actions
-      sendMessage: async (content, options) => {
+      sendMessage: async (content: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          // Implémentation de l'envoi du message
+          // Implémentation
           set(state => ({ chat: { ...state.chat, isLoading: false } }));
         } catch (error) {
           set(state => ({ 
             chat: { 
               ...state.chat, 
-              isLoading: false, 
+              isLoading: false,
               error: error instanceof Error ? error.message : 'Error sending message'
-            } 
+            }
           }));
+          throw error;
         }
       },
       
@@ -100,19 +101,20 @@ export const useStore = create<StoreState & StoreActions>()(
         chat: { ...state.chat, messages: [] }
       })),
 
-      loadSessionMessages: async (sessionId) => {
+      loadSessionMessages: async (id: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          // Implémentation du chargement des messages
+          // Implémentation avec id
           set(state => ({ chat: { ...state.chat, isLoading: false } }));
         } catch (error) {
           set(state => ({ 
             chat: { 
               ...state.chat, 
-              isLoading: false, 
+              isLoading: false,
               error: error instanceof Error ? error.message : 'Error loading messages'
-            } 
+            }
           }));
+          throw error;
         }
       },
 
