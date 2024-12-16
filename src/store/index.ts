@@ -68,15 +68,26 @@ const initialState: StoreState = {
 
 export const useStore = create<StoreState & StoreActions>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
 
-      // Chat actions
       sendMessage: async (content: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          // Implémentation
-          set(state => ({ chat: { ...state.chat, isLoading: false } }));
+          const message = {
+            id: crypto.randomUUID(),
+            content,
+            type: 'user' as const,
+            timestamp: new Date().toISOString()
+          };
+
+          set(state => ({
+            chat: {
+              ...state.chat,
+              messages: [...state.chat.messages, message],
+              isLoading: false
+            }
+          }));
         } catch (error) {
           set(state => ({ 
             chat: { 
@@ -101,11 +112,17 @@ export const useStore = create<StoreState & StoreActions>()(
         chat: { ...state.chat, messages: [] }
       })),
 
-      loadSessionMessages: async (id: string) => {
+       loadSessionMessages: async (sessionId: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          // Implémentation avec id
-          set(state => ({ chat: { ...state.chat, isLoading: false } }));
+          const messages = [] // À implémenter avec l'appel API
+          set(state => ({ 
+            chat: { 
+              ...state.chat, 
+              messages, 
+              isLoading: false 
+            }
+          }));
         } catch (error) {
           set(state => ({ 
             chat: { 
@@ -181,10 +198,6 @@ export const useStore = create<StoreState & StoreActions>()(
     {
       name: 'chat-store',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        ui: { theme: state.ui.theme },
-        session: { currentSessionId: state.session.currentSessionId }
-      })
     }
   )
 );
