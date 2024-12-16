@@ -3,17 +3,30 @@
 export const API_ENDPOINTS = {
   CHAT: {
     SEND: '/chat',
+    STREAM: '/chat/stream',
+    // On conserve HISTORY car il est utilisé pour la récupération de l'historique des messages
+    HISTORY: '/chat/history'
   },
   SESSION: {
     CREATE: '/sessions/new',
+    LIST: '/sessions',
     GET: (id: string) => `/sessions/${id}`,
-    MESSAGES: (sessionId: string) => `/history/session/${sessionId}`
+    HISTORY: (sessionId: string) => `/history/session/${sessionId}`
   },
   USER: {
     HISTORY: (userId: string) => `/history/user/${userId}`
   },
   HEALTH: '/health'
 } as const;
+
+// Types pour l'API
+export type ApiEndpoints = typeof API_ENDPOINTS;
+
+/ Helper pour obtenir le type d'un endpoint spécifique
+export type EndpointPath<
+  T extends keyof ApiEndpoints,
+  K extends keyof ApiEndpoints[T]
+> = ApiEndpoints[T][K];
 
 export interface ApiRoutes {
   chat: {
@@ -34,4 +47,3 @@ export interface ApiRoutes {
   health: typeof API_ENDPOINTS.HEALTH;
 }
 
-export default API_ENDPOINTS;
