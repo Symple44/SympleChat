@@ -18,34 +18,42 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { isDark } = useTheme();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Commencez avec true
   const [error, setError] = useState<string | null>(null);
   
-  const sessions = useStore(state => state.session.sessions);
+  const sessions = useStore(state => state.session.sessions) ?? []; // Valeur par défaut vide
   const currentSessionId = useStore(state => state.session.currentSessionId);
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const setSessions = useStore(state => state.setSessions);
 
   const fetchSessions = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setError("ID utilisateur non disponible");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setIsLoading(true);
       const response = await apiClient.get<Session[]>(
         API_ENDPOINTS.USER.SESSIONS(userId)
       );
-      setSessions(response);
+      setSessions(response || []); // S'assurer qu'on a au moins un tableau vide
       setError(null);
     } catch (err) {
       console.error('Erreur chargement sessions:', err);
       setError('Impossible de charger les sessions');
+      setSessions([]); // Réinitialiser en cas d'erreur
     } finally {
       setIsLoading(false);
     }
   }, [userId, setSessions]);
 
   const handleNewSession = async () => {
-    if (!userId) return;
+    if (!userId) {
+      setError("ID utilisateur non disponible");
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -53,9 +61,11 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         userId
       });
       
-      setSessions([response, ...sessions]);
-      setCurrentSession(response);
-      navigate(`/${userId}/session/${response.id}`);
+      if (response) {
+        setSessions(prevSessions => [response, ...(prevSessions || [])]);
+        setCurrentSession(response);
+        navigate(`/${userId}/session/${response.id}`);
+      }
     } catch (err) {
       console.error('Erreur création session:', err);
       setError('Impossible de créer une nouvelle session');
@@ -65,6 +75,11 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   };
 
   const handleSessionSelect = async (session: Session) => {
+    if (!userId) {
+      setError("ID utilisateur non disponible");
+      return;
+    }
+
     try {
       setCurrentSession(session);
       navigate(`/${userId}/session/${session.id}`);
@@ -80,7 +95,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
@@ -119,7 +134,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           Sessions de chat
         </h1>
         <button
-          onClick={handleNewSession}
+          onClick={() => void handleNewSession()}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-5 h-5" />
@@ -127,12 +142,12 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         </button>
       </div>
 
-      {sessions.length > 0 ? (
+      {Array.isArray(sessions) && sessions.length > 0 ? (
         <div className="space-y-4">
           {sessions.map((session) => (
             <div
               key={session.id}
-              onClick={() => handleSessionSelect(session)}
+              onClick={() => void handleSessionSelect(session)}
               className={`
                 p-4 rounded-lg border cursor-pointer transition-all
                 ${session.id === currentSessionId
@@ -154,13 +169,15 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
                     <h3 className={`font-medium ${
                       isDark ? 'text-white' : 'text-gray-900'
                     }`}>
-                      {session.metadata.title || "Nouvelle conversation"}
+                      {session.metadata?.title || "Nouvelle conversation"}
                     </h3>
-                    <p className={`text-sm mt-1 ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
-                    }`}>
-                      {formatRelativeTime(session.metadata.createdAt)}
-                    </p>
+                    {session.metadata?.createdAt && (
+                      <p className={`text-sm mt-1 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        {formatRelativeTime(session.metadata.createdAt)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 
@@ -168,7 +185,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
                   <span className={`text-sm ${
                     isDark ? 'text-gray-400' : 'text-gray-500'
                   }`}>
-                    {session.metadata.messageCount} messages
+                    {session.metadata?.messageCount || 0} messages
                   </span>
                   {session.status === 'archived' && (
                     <Archive className={`w-4 h-4 ${
