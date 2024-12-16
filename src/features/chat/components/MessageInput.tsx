@@ -5,7 +5,7 @@ import { Send, Loader2 } from 'lucide-react';
 import { APP_CONFIG } from '../../../config/app.config';
 
 interface MessageInputProps {
-  onSend: (message: string) => Promise<void>;
+  onSend: (content: string) => Promise<void>;
   isLoading: boolean;
   disabled: boolean;
   className?: string;
