@@ -22,6 +22,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   const [error, setError] = useState<string | null>(null);
   
   const sessions = useStore(state => state.session.sessions);
+  const currentSessionId = useStore(state => state.session.currentSessionId);
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const setSessions = useStore(state => state.setSessions);
 
@@ -77,39 +78,15 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
     void fetchSessions();
   }, [fetchSessions]);
 
-  const handleSessionSelect = async (session: Session) => {
-    try {
-      await setCurrentSession(session);
-      navigate(`/session/${session.id}`);
-    } catch (error) {
-      console.error('Erreur sélection session:', error);
-    }
-  };
-
-  const handleNewSession = async () => {
-    try {
-      const response = await fetch('/api/sessions', { method: 'POST' });
-      const newSession = await response.json();
-      setSessions([...sessions, newSession]);
-      navigate(`/session/${newSession.id}`);
-    } catch (error) {
-      console.error('Erreur création session:', error);
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className={`flex items-center justify-center h-screen ${
-        isDark ? 'bg-gray-900' : 'bg-gray-50'
-      }`}>
-        <Loader2 className={`w-8 h-8 animate-spin ${
-          isDark ? 'text-blue-400' : 'text-blue-500'
-        }`} />
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
-  if (listError) {
+  if (error) {
     return (
       <div className="max-w-2xl mx-auto p-4 text-center">
         <div className={`border rounded-lg p-4 ${
@@ -117,7 +94,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
             ? 'bg-red-900/20 border-red-800 text-red-400'
             : 'bg-red-50 border-red-200 text-red-600'
         }`}>
-          <p>{listError}</p>
+          <p>{error}</p>
           <button
             onClick={() => void fetchSessions()}
             className={`mt-4 px-4 py-2 rounded-lg ${
