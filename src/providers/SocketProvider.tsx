@@ -1,17 +1,23 @@
 // src/providers/SocketProvider.tsx
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { socketManager } from '../core/socket/socket';
-import type { WebSocketMessage } from '../core/socket/types';
 import { useWebSocket } from '../shared/hooks/useWebSocket';
+import type { WebSocketMessage } from '../core/socket/types';
 
 interface SocketContextValue {
   isConnected: boolean;
-  send: (message: WebSocketMessage) => boolean;
   lastMessage: WebSocketMessage | null;
+  error: Error | null;
+  send: (message: unknown) => boolean;
+  connect: () => void;
+  disconnect: () => void;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
+
+interface SocketProviderProps {
+  children: React.ReactNode;
+}
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
@@ -21,53 +27,50 @@ export const useSocket = () => {
   return context;
 };
 
-interface SocketProviderProps {
-  children: React.ReactNode;
-}
-
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
-  const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
+  const { isConnected, error, send, connect, disconnect } = useWebSocket();
 
   useEffect(() => {
-    const handleConnect = () => {
-      setIsConnected(true);
-      console.log('WebSocket Connected');
-    };
-
-    const handleDisconnect = () => {
-      setIsConnected(false);
-      console.log('WebSocket Disconnected');
-    };
-
-    const handleMessage = (message: WebSocketMessage) => {
-      setLastMessage(message);
-      console.log('WebSocket Message:', message);
-    };
-
-    // Configuration des événements WebSocket
-    socketManager.config.onConnect = handleConnect;
-    socketManager.config.onDisconnect = handleDisconnect;
-    socketManager.config.onMessage = handleMessage;
-
     // Connexion initiale
-    socketManager.connect();
+    if (!isConnected) {
+      connect();
+    }
 
     // Nettoyage lors du démontage
     return () => {
-      socketManager.disconnect();
+      disconnect();
     };
-  }, []);
+  }, [isConnected, connect, disconnect]);
+
+  // Gestion des messages
+  const handleSend = (message: unknown): boolean => {
+    try {
+      return send(message);
+    } catch (error) {
+      console.error('Erreur envoi message socket:', error);
+      return false;
+    }
+  };
 
   const value: SocketContextValue = {
     isConnected,
-    send: (message) => socketManager.send(message),
-    lastMessage
+    lastMessage,
+    error,
+    send: handleSend,
+    connect,
+    disconnect
   };
 
   return (
     <SocketContext.Provider value={value}>
       {children}
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg">
+          <p className="font-bold">Erreur de connexion</p>
+          <p>{error.message}</p>
+        </div>
+      )}
     </SocketContext.Provider>
   );
 };
