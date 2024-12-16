@@ -2,6 +2,8 @@
 
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { apiClient } from '../core/api/client';
+import { API_ENDPOINTS } from '../core/api/endpoints';
 import type { Message } from '../features/chat/types/chat';
 import type { Session } from '../core/session/types';
 
@@ -69,11 +71,24 @@ export const useStore = create<StoreState & StoreActions>()(
     (set) => ({
       ...initialState,
 
-      sendMessage: async (content, sessionId) => {
+      sendMessage: async (content: string, sessionId: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          // Implémentation à venir
-          set(state => ({ chat: { ...state.chat, isLoading: false } }));
+          const newMessage: Message = {
+            id: crypto.randomUUID(),
+            content,
+            sessionId,
+            type: 'user',
+            timestamp: new Date().toISOString()
+          };
+
+          set(state => ({
+            chat: {
+              ...state.chat,
+              messages: [...state.chat.messages, newMessage],
+              isLoading: false
+            }
+          }));
         } catch (error) {
           set(state => ({ 
             chat: { 
@@ -101,17 +116,27 @@ export const useStore = create<StoreState & StoreActions>()(
         chat: { ...state.chat, messages: [] }
       })),
 
-      loadSessionMessages: async (sessionId) => {
+      loadSessionMessages: async (sessionId: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          // Implémentation à venir
-          set(state => ({ chat: { ...state.chat, isLoading: false } }));
+          const messages = await apiClient.get<Message[]>(
+            API_ENDPOINTS.SESSION.MESSAGES(sessionId)
+          );
+
+          set(state => ({ 
+            chat: { 
+              ...state.chat,
+              messages: messages || [],
+              isLoading: false 
+            }
+          }));
         } catch (error) {
           set(state => ({ 
             chat: { 
               ...state.chat, 
               isLoading: false,
-              error: error instanceof Error ? error.message : 'Error loading messages'
+              error: error instanceof Error ? error.message : 'Error loading messages',
+              messages: []
             }
           }));
           throw error;
@@ -119,7 +144,11 @@ export const useStore = create<StoreState & StoreActions>()(
       },
 
       setCurrentSession: (session) => set(state => ({
-        session: { ...state.session, currentSessionId: session.id }
+        session: { 
+          ...state.session, 
+          currentSessionId: session.id,
+          error: null
+        }
       })),
 
       setSessions: (sessionsOrUpdater) => set(state => ({
@@ -127,12 +156,16 @@ export const useStore = create<StoreState & StoreActions>()(
           ...state.session,
           sessions: typeof sessionsOrUpdater === 'function'
             ? sessionsOrUpdater(state.session.sessions)
-            : sessionsOrUpdater
+            : sessionsOrUpdater,
+          error: null
         }
       })),
 
       setTheme: (isDark) => set(state => ({
-        ui: { ...state.ui, theme: isDark ? 'dark' : 'light' }
+        ui: { 
+          ...state.ui, 
+          theme: isDark ? 'dark' : 'light' 
+        }
       })),
 
       setError: (error) => set(state => ({
