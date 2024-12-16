@@ -2,7 +2,6 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
 import AppProvider from './providers/AppProvider';
 import { apiClient } from './core/api/client';
 import { socketManager } from './core/socket/socket';
@@ -10,64 +9,94 @@ import { socketManager } from './core/socket/socket';
 // Styles globaux
 import './styles/main.css';
 
+const ErrorDisplay = ({ error }: { error: string }) => (
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+    <div className="max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 text-center">
+      <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        Erreur de connexion
+      </h1>
+      <p className="text-gray-600 dark:text-gray-300 mb-4">
+        {error}
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+      >
+        Réessayer
+      </button>
+    </div>
+  </div>
+);
+
 // Configuration initiale
 async function initializeApp() {
+  let root: ReactDOM.Root | null = null;
+  
   try {
+    root = ReactDOM.createRoot(
+      document.getElementById('chat-root') as HTMLElement
+    );
+
     // Vérification de la santé de l'API
-    const healthCheck = await apiClient.get('/health');
-    console.log('API Status:', healthCheck);
+    await apiClient.get('/health');
 
     // Initialisation du WebSocket
     socketManager.connect();
 
     // Rendu de l'application
-    ReactDOM.createRoot(document.getElementById('chat-root')!).render(
+    root.render(
       <React.StrictMode>
-        <BrowserRouter>
-          <AppProvider>
-            <div id="modal-root" /> {/* Portal container pour les modals */}
-            <div id="toast-root" /> {/* Portal container pour les notifications */}
-          </AppProvider>
-        </BrowserRouter>
+        <AppProvider />
       </React.StrictMode>
     );
 
   } catch (error) {
     console.error('Erreur d\'initialisation:', error);
     
-    // Affichage d'une page d'erreur si l'initialisation échoue
-    ReactDOM.createRoot(document.getElementById('chat-root')!).render(
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
-          <h1 className="text-xl font-semibold text-gray-900 mb-4">
-            Erreur de connexion
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Impossible de se connecter au serveur. Veuillez vérifier votre connexion et réessayer.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Réessayer
-          </button>
-        </div>
-      </div>
-    );
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Impossible de se connecter au serveur. Veuillez vérifier votre connexion et réessayer.';
+    
+    if (root) {
+      root.render(<ErrorDisplay error={errorMessage} />);
+    } else {
+      console.error('Element root non trouvé');
+    }
   }
 }
 
 // Gestion des erreurs globales non capturées
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Promesse non gérée:', event.reason);
-});
-
-window.addEventListener('error', (event) => {
+const handleGlobalError = (event: ErrorEvent) => {
   console.error('Erreur globale:', event.error);
-});
+  event.preventDefault();
+  
+  ReactDOM.createRoot(document.getElementById('chat-root') as HTMLElement).render(
+    <ErrorDisplay error="Une erreur inattendue s'est produite. Veuillez rafraîchir la page." />
+  );
+};
+
+const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+  console.error('Promesse rejetée non gérée:', event.reason);
+  event.preventDefault();
+
+  ReactDOM.createRoot(document.getElementById('chat-root') as HTMLElement).render(
+    <ErrorDisplay error="Une erreur inattendue s'est produite. Veuillez rafraîchir la page." />
+  );
+};
+
+// Configuration des gestionnaires d'erreurs globaux
+if (process.env.NODE_ENV !== 'production') {
+  window.addEventListener('error', handleGlobalError);
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+}
 
 // Démarrage de l'application
-initializeApp();
+initializeApp().catch(error => {
+  console.error('Erreur critique lors du démarrage:', error);
+  ReactDOM.createRoot(document.getElementById('chat-root') as HTMLElement).render(
+    <ErrorDisplay error="Erreur critique lors du démarrage de l'application." />
+  );
+});
 
 // Hot Module Replacement (HMR)
 if (import.meta.hot) {
@@ -76,11 +105,7 @@ if (import.meta.hot) {
 
 // Activation du debugging en développement
 if (process.env.NODE_ENV === 'development') {
-  // Debug info
   console.log('Mode développement activé');
   console.log('API URL:', import.meta.env.VITE_API_URL);
   console.log('WS URL:', import.meta.env.VITE_WS_HOST);
 }
-
-// Export pour les tests
-export { initializeApp };
