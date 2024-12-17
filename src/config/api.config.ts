@@ -1,36 +1,48 @@
-// src/config/api.config.ts
+// src/config/app.config.ts
 
-const isDev = import.meta.env.MODE === 'development';
-const defaultApiUrl = isDev ? 'http://192.168.0.15:8000' : window.location.origin;
+const getBaseUrl = () => {
+  // Récupère le hostname actuel pour la configuration
+  const hostname = window.location.hostname;
+  const isDev = import.meta.env.DEV;
 
-export const API_CONFIG = {
-  BASE_URL: `${defaultApiUrl}/api`,
-  WS_URL: `${defaultApiUrl.replace(/^http/, 'ws')}/ws`,
-  DEFAULT_HEADERS: {
-    'Content-Type': 'application/json'
+  return {
+    API_BASE: isDev ? 'http://192.168.0.15:8000' : 'https://chat.symple.fr',
+    WS_BASE: isDev ? 'ws://192.168.0.15:8000' : 'wss://chat.symple.fr',
+    APP_BASE: isDev ? 'http://localhost:3000' : 'https://chat.symple.fr'
+  };
+};
+
+const { API_BASE, WS_BASE, APP_BASE } = getBaseUrl();
+
+export const APP_CONFIG = {
+  NAME: "Eurêka Solutions",
+  TITLE_SUFFIX: "Chat",
+  BASE_URL: APP_BASE,
+  
+  CHAT: {
+    DEFAULT_USER_ID: 'oweo',
+    MAX_MESSAGE_LENGTH: 1000,
+    DEFAULT_LANGUAGE: 'fr',
+    WS_RECONNECT_DELAY: 3000,
+    API_BASE_URL: API_BASE,
+    WS_BASE_URL: WS_BASE
   },
-  ENDPOINTS: {
-    CHAT: {
-      SEND: '/chat',
-      STREAM: '/chat/stream',
-      HISTORY: '/chat/history'
-    },
-    SESSION: {
-      CREATE: '/sessions/new',
-      GET: (id: string) => `/sessions/${id}`,
-      LIST: '/sessions',
-      DELETE: (id: string) => `/sessions/${id}`
-    },
-    USER: {
-      HISTORY: (userId: string) => `/history/user/${userId}`,
-      SESSIONS: (userId: string) => `/users/${userId}/sessions`
-    },
-    HEALTH: '/health'
+
+  API: {
+    BASE_URL: API_BASE,
+    WS_URL: WS_BASE,
+    TIMEOUT: 30000,
+    RETRY_COUNT: 3
   },
-  TIMEOUT: 30000,
-  RETRY_ATTEMPTS: 3,
-  RETRY_DELAY: 1000,
-  CACHE_DURATION: 5 * 60 * 1000 // 5 minutes
+
+  UI: {
+    SHOW_DOCUMENT_IMAGES: false,
+    THEME: {
+      DEFAULT: 'light' as const,
+      STORAGE_KEY: 'theme'
+    },
+    DEBUG: true  // Pour activer les logs
+  }
 } as const;
 
-export default API_CONFIG;
+export default APP_CONFIG;
