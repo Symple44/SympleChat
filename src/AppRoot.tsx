@@ -1,16 +1,15 @@
 // src/AppRoot.tsx
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useStore } from './store';
+import { useStore } from '@/store';
 import App from './App';
 import SessionList from './features/sessions/components/SessionList';
 import ChatContainer from './features/chat/components/ChatContainer';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 import { ThemeProvider } from './providers/ThemeProvider';
-import { ChatProvider } from './providers/ChatProvider';
+import ChatProvider from './providers/ChatProvider';
 import { SocketProvider } from './providers/SocketProvider';
-import { apiClient } from './core/api/client';
 import { APP_CONFIG } from './config/app.config';
 
 const AppContent: React.FC = () => {
