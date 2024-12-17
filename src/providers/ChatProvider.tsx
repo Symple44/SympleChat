@@ -1,16 +1,18 @@
-// /src/providers/ChatProvider.tsx
+// src/providers/ChatProvider.tsx
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { useSocket } from './SocketProvider';
 import type { ChatContextValue } from '../features/chat/types/chat';
+import type { Session } from '../core/session/types';
 
-const ChatContext = createContext<ChatContextValue | null>(null);
-
-interface ChatProviderProps {
-  children: React.ReactNode;
+interface ExtendedChatContextValue extends ChatContextValue {
+  handleSessionSelect: (session: Session) => Promise<void>;
+  handleNewSession: () => Promise<void>;
 }
+
+const ChatContext = createContext<ExtendedChatContextValue | null>(null);
 
 export const useChat = () => {
   const context = useContext(ChatContext);
@@ -20,76 +22,118 @@ export const useChat = () => {
   return context;
 };
 
-export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
+export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
-  const { userId, sessionId: routeSessionId } = useParams<{ 
-    userId?: string; 
-    sessionId?: string; 
-  }>();
-  const [error, setError] = useState<string | null>(null);
+  const { userId } = useParams<{ userId?: string }>();
+  const [isProcessing, setIsProcessing] = useState(false);
   const { send } = useSocket();
 
   const {
-    chat: { messages, isLoading },
+    chat: { messages, isLoading, error },
     session: { currentSessionId },
-    sendMessage: storeSendMessage
-  } = useStore(state => ({
-    chat: state.chat,
-    session: state.session,
-    sendMessage: state.sendMessage
-  }));
+    sendMessage: storeSendMessage,
+    setCurrentSession: storeSetCurrentSession,
+    setSessions: storeSetsessions
+  } = useStore();
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    if (!userId || !routeSessionId) {
-      throw new Error('Session invalide');
+  const handleSessionSelect = useCallback(async (session: Session) => {
+    if (isProcessing) return;
+    
+    try {
+      setIsProcessing(true);
+      console.log('Sélection session:', session.id);
+      
+      await storeSetCurrentSession(session);
+      
+      if (userId) {
+        navigate(`/${userId}/session/${session.id}`);
+      }
+    } catch (error) {
+      console.error('Erreur sélection session:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
     }
+  }, [userId, navigate, storeSetCurrentSession, isProcessing]);
+
+  const handleNewSession = useCallback(async () => {
+    if (isProcessing || !userId) return;
 
     try {
-      await storeSendMessage(content, routeSessionId);
+      setIsProcessing(true);
+      console.log('Création nouvelle session...');
+
+      const response = await fetch('/api/sessions/new', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur création session');
+      }
+
+      const { session_id } = await response.json();
+
+      const newSession: Session = {
+        id: session_id,
+        userId,
+        status: 'active',
+        metadata: {
+          title: "Nouvelle conversation",
+          messageCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          language: 'fr'
+        }
+      };
+
+      console.log('Nouvelle session créée:', newSession);
+
+      storeSetsessions((prev: Session[]) => [newSession, ...prev]);
+      await storeSetCurrentSession(newSession);
+      navigate(`/${userId}/session/${newSession.id}`);
+    } catch (error) {
+      console.error('Erreur création session:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [userId, navigate, storeSetsessions, storeSetCurrentSession, isProcessing]);
+
+  const sendMessage = useCallback(async (content: string) => {
+    if (!userId || !currentSessionId) return;
+
+    try {
+      await storeSendMessage(content, currentSessionId);
       
       send('message', {
         content,
         userId,
-        sessionId: routeSessionId,
+        sessionId: currentSessionId,
         timestamp: new Date().toISOString()
       });
-
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Erreur envoi message:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'envoi du message';
-      setError(errorMessage);
       throw error;
     }
-  }, [userId, routeSessionId, storeSendMessage, send]);
+  }, [userId, currentSessionId, storeSendMessage, send]);
 
-  useEffect(() => {
-    if (routeSessionId && routeSessionId !== currentSessionId && !isLoading) {
-      storeSendMessage("Session initialisée", routeSessionId).catch((error: unknown) => {
-        console.error('Erreur chargement session:', error);
-        setError('Session invalide ou expirée');
-        if (userId) {
-          navigate(`/${userId}`);
-        }
-      });
-    }
-  }, [routeSessionId, currentSessionId, userId, isLoading, navigate, storeSendMessage]);
-
-  const value = {
+  const value: ExtendedChatContextValue = {
     messages,
-    isLoading,
+    isLoading: isLoading || isProcessing,
     error,
     currentSessionId,
-    sendMessage: handleSendMessage
+    sendMessage,
+    handleSessionSelect,
+    handleNewSession
   };
 
   return (
     <ChatContext.Provider value={value}>
       {children}
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
     </ChatContext.Provider>
   );
 };
