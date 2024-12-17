@@ -1,4 +1,4 @@
-// src/components/chat/SessionList.tsx
+// src/features/sessions/components/SessionList.tsx
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -62,56 +62,59 @@ const SessionList: React.FC = () => {
     void loadSessions();
   }, [userId]);
 
-  const handleSessionSelect = async (session: Session) => {
+  const handleSessionClick = async (session: Session) => {
     try {
+      console.log('Sélection de la session:', session.id);
       await setCurrentSession(session);
-      navigate(`/${userId}/session/${session.id}`);
+      const path = `/${userId}/session/${session.id}`;
+      console.log('Navigation vers:', path);
+      navigate(path);
     } catch (err) {
-      console.error('Erreur sélection session:', err);
+      console.error('Erreur lors de la sélection de la session:', err);
       setError('Impossible de sélectionner cette session');
     }
   };
 
-  const handleNewSession = async () => {
-  if (!userId) {
-    setError("ID utilisateur non disponible");
-    return;
-  }
-
-  try {
-    setIsLoading(true);
-    
-    const response = await apiClient.post<{ session_id: string }>(
-      API_ENDPOINTS.SESSION.CREATE,
-      { user_id: userId }
-    );
-
-    if (response && response.session_id) {
-      const newSession: Session = {
-        id: response.session_id,
-        userId,
-        status: 'active',
-        metadata: {
-          title: "Nouvelle conversation",
-          messageCount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          language: 'fr'
-        }
-      };
-
-      // Correction du typage de setSessions
-      setSessions((prevSessions: Session[]) => [newSession, ...prevSessions]);
-      await setCurrentSession(newSession);
-      navigate(`/${userId}/session/${newSession.id}`);
+  const handleNewSessionClick = async () => {
+    if (!userId) {
+      setError("ID utilisateur non disponible");
+      return;
     }
-  } catch (err) {
-    console.error('Erreur création session:', err);
-    setError('Impossible de créer une nouvelle session');
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    try {
+      setIsLoading(true);
+      console.log('Création d\'une nouvelle session...');
+      
+      const response = await apiClient.post<{ session_id: string }>(
+        API_ENDPOINTS.SESSION.CREATE,
+        { user_id: userId }
+      );
+
+      if (response && response.session_id) {
+        const newSession: Session = {
+          id: response.session_id,
+          userId,
+          status: 'active',
+          metadata: {
+            title: "Nouvelle conversation",
+            messageCount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            language: 'fr'
+          }
+        };
+
+        setSessions((prevSessions: Session[]) => [newSession, ...prevSessions]);
+        await setCurrentSession(newSession);
+        navigate(`/${userId}/session/${newSession.id}`);
+      }
+    } catch (err) {
+      console.error('Erreur création session:', err);
+      setError('Impossible de créer une nouvelle session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -128,9 +131,13 @@ const SessionList: React.FC = () => {
           Sessions de chat
         </h1>
         <button
-          onClick={() => void handleNewSession()}
+          onClick={handleNewSessionClick}
           className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg 
-                   hover:bg-blue-700 transition-colors"
+                   hover:bg-blue-700 active:bg-blue-800 transform active:scale-95
+                   transition-all duration-150 ease-in-out cursor-pointer
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={isLoading}
         >
           <Plus className="w-5 h-5" />
           <span>Nouvelle session</span>
@@ -152,53 +159,59 @@ const SessionList: React.FC = () => {
         </div>
       )}
 
-      {sessions.length > 0 ? (
-        <div className="space-y-4">
-          {sessions.map((session) => (
-            <button
-              key={session.id}
-              onClick={() => void handleSessionSelect(session)}
-              className={`w-full p-4 rounded-lg border text-left
-                ${session.id === currentSessionId
-                  ? isDark
-                    ? 'border-blue-700 bg-blue-900/20'
-                    : 'border-blue-500 bg-blue-50'
-                  : isDark
-                    ? 'border-gray-700 hover:border-blue-700'
-                    : 'border-gray-200 hover:border-blue-300'
-                }
-              `}
-            >
-              <div className="flex items-start space-x-3">
-                <MessageSquare className={`w-5 h-5 mt-1 ${
-                  isDark ? 'text-blue-400' : 'text-blue-500'
-                }`} />
-                <div>
-                  <h3 className={`font-medium ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {session.metadata.title || "Nouvelle conversation"}
-                  </h3>
-                  <p className={`text-sm mt-1 ${
-                    isDark ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                    {session.metadata.messageCount} messages
-                  </p>
-                </div>
+      <div className="space-y-4">
+        {sessions.map((session) => (
+          <button
+            key={session.id}
+            onClick={() => void handleSessionClick(session)}
+            className={`w-full p-4 rounded-lg border group
+              transition-all duration-150 ease-in-out
+              transform hover:scale-[1.01] active:scale-[0.99]
+              focus:outline-none focus:ring-2 focus:ring-blue-500
+              cursor-pointer select-none
+              ${session.id === currentSessionId
+                ? isDark
+                  ? 'border-blue-700 bg-blue-900/20'
+                  : 'border-blue-500 bg-blue-50'
+                : isDark
+                  ? 'border-gray-700 hover:border-blue-700 hover:bg-gray-800'
+                  : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+              }
+            `}
+          >
+            <div className="flex items-start space-x-3">
+              <MessageSquare className={`w-5 h-5 mt-1 transition-colors
+                ${isDark ? 'text-blue-400' : 'text-blue-500'}
+                group-hover:text-blue-600
+              `} />
+              <div className="text-left">
+                <h3 className={`font-medium transition-colors
+                  ${isDark ? 'text-white' : 'text-gray-900'}
+                  group-hover:text-blue-600
+                `}>
+                  {session.metadata.title || "Nouvelle conversation"}
+                </h3>
+                <p className={`text-sm mt-1
+                  ${isDark ? 'text-gray-400' : 'text-gray-500'}
+                `}>
+                  {session.metadata.messageCount} messages
+                </p>
               </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center mt-8">
-          <MessageSquare className={`w-12 h-12 mx-auto mb-4 opacity-50 ${
-            isDark ? 'text-gray-400' : 'text-gray-500'
-          }`} />
-          <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
-            Aucune session de chat
-          </p>
-        </div>
-      )}
+            </div>
+          </button>
+        ))}
+
+        {sessions.length === 0 && (
+          <div className="text-center mt-8">
+            <MessageSquare className={`w-12 h-12 mx-auto mb-4 opacity-50 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+              Aucune session de chat
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
