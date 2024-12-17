@@ -6,6 +6,7 @@ import { apiClient } from '../core/api/client';
 import { API_ENDPOINTS } from '../core/api/endpoints';
 import type { Message } from '../features/chat/types/chat';
 import type { Session } from '../core/session/types';
+import { APP_CONFIG } from '../config/app.config';
 
 interface StoreState {
   chat: {
@@ -72,18 +73,52 @@ export const useStore = create<StoreState & StoreActions>()(
         try {
           set(state => ({ chat: { ...state.chat, isLoading: true, error: null } }));
           
-          const response = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
-            content,
-            sessionId
-          });
+          // Format the request according to API specifications
+          const request = {
+            user_id: APP_CONFIG.CHAT.DEFAULT_USER_ID, // Or get from state/props
+            query: content,
+            session_id: sessionId,
+            language: APP_CONFIG.CHAT.DEFAULT_LANGUAGE,
+            context: {},
+            application: 'symple-chat'
+          };
 
+          // Create optimistic message
+          const optimisticMessage: Message = {
+            id: crypto.randomUUID(),
+            content,
+            type: 'user',
+            timestamp: new Date().toISOString(),
+            sessionId
+          };
+
+          // Add optimistic message
           set(state => ({
             chat: {
               ...state.chat,
-              messages: [...state.chat.messages, response],
+              messages: [...state.chat.messages, optimisticMessage]
+            }
+          }));
+
+          // Send to API
+          const response = await apiClient.post<Message>(
+            API_ENDPOINTS.CHAT.SEND,
+            request
+          );
+
+          // Update with server response
+          set(state => ({
+            chat: {
+              ...state.chat,
+              messages: [
+                ...state.chat.messages.filter(m => m.id !== optimisticMessage.id),
+                response
+              ],
               isLoading: false
             }
           }));
+
+          return response;
         } catch (error) {
           set(state => ({ 
             chat: { 
