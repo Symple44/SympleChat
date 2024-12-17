@@ -71,12 +71,13 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
     void loadSessions();
   }, [userId]);
 
-  const handleSessionSelect = async (session: Session) => {
+  const handleSessionSelect = (session: Session) => {
     console.log('handleSessionSelect appelé avec:', session);
     try {
       setCurrentSession(session);
       const url = `/${userId}/session/${session.id}`;
       console.log('Navigation vers:', url);
+      alert(`Navigation vers ${url}`);
       navigate(url);
     } catch (err) {
       console.error('Erreur détaillée sélection session:', err);
@@ -86,6 +87,8 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
   const handleNewSession = async () => {
     console.log('handleNewSession appelé');
+    alert('Création nouvelle session');
+    
     if (!userId) {
       console.error("Pas d'userId disponible pour la création");
       setError("ID utilisateur non disponible");
@@ -147,18 +150,29 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Sessions de chat
         </h1>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Clic sur bouton nouvelle session détecté');
-            void handleNewSession();
-          }}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nouvelle session</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              console.log('TEST CLICK');
+              alert('Test click ok');
+            }}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            Test Click
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              console.log('Click nouvelle session');
+              void handleNewSession();
+            }}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nouvelle session</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -167,8 +181,8 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         }`}>
           <p>{error}</p>
           <button
-            onClick={(e) => {
-              e.preventDefault();
+            type="button"
+            onClick={() => {
               console.log('Clic sur bouton réessayer');
               void loadSessions();
             }}
@@ -179,16 +193,21 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         </div>
       )}
 
-      {sessions.length > 0 ? (
+      {sessions?.length > 0 ? (
         <div className="space-y-4">
           {sessions.map((session) => (
             <div
               key={session.id}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Clic sur session détecté:', session.id);
-                void handleSessionSelect(session);
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                console.log('Clic sur session:', session.id);
+                handleSessionSelect(session);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleSessionSelect(session);
+                }
               }}
               className={`
                 p-4 rounded-lg border transition-all cursor-pointer
