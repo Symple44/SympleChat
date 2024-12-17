@@ -1,7 +1,5 @@
 // src/core/api/endpoints.ts
 
-// Définition des endpoints de l'API
-// Définition des endpoints de l'API
 export const API_ENDPOINTS = {
   CHAT: {
     SEND: '/chat',
@@ -11,13 +9,14 @@ export const API_ENDPOINTS = {
   SESSION: {
     CREATE: '/sessions/new',
     GET: (id: string) => `/sessions/${id}`,
-    HISTORY: (sessionId: string) => `/history/session/${sessionId}`
+    HISTORY: (sessionId: string) => `/sessions/${sessionId}/history`
   },
   USER: {
-    HISTORY: (userId: string) => `/history/user/${userId}`
-  },
-  HEALTH: '/health'
-} as const;
+    // Assurez-vous que cet endpoint retourne bien les données avec les IDs de session
+    HISTORY: (userId: string) => `/api/history/user/${userId}`,
+    SESSIONS: (userId: string) => `/api/users/${userId}/sessions`
+  }
+};
 
 export type ApiEndpoints = typeof API_ENDPOINTS;
 
