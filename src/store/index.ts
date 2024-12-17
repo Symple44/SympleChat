@@ -35,16 +35,13 @@ interface StoreActions {
   loadSessionMessages: (sessionId: string) => Promise<void>;
   
   // Session actions
-  setCurrentSession: (session: Session) => void;
-  setSessions: (sessions: Session[] | ((prev: Session[]) => Session[])) => void;
+  setCurrentSession: (session: Session) => Promise<void>;
+  setSessions: (sessions: Session[]) => void;
   
   // UI actions
   setTheme: (isDark: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
-  
-  // Common actions
-  resetStore: () => void;
 }
 
 const initialState: StoreState = {
@@ -68,12 +65,13 @@ const initialState: StoreState = {
 
 export const useStore = create<StoreState & StoreActions>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
       sendMessage: async (content: string, sessionId: string) => {
-        set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
+          set(state => ({ chat: { ...state.chat, isLoading: true, error: null } }));
+          
           const response = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
             content,
             sessionId
@@ -99,23 +97,25 @@ export const useStore = create<StoreState & StoreActions>()(
       },
       
       setMessages: (messages) => set(state => ({
-        chat: { ...state.chat, messages }
+        chat: { ...state.chat, messages, error: null }
       })),
       
       addMessage: (message) => set(state => ({
         chat: { 
           ...state.chat, 
-          messages: [...state.chat.messages, message] 
+          messages: [...state.chat.messages, message],
+          error: null
         }
       })),
       
       clearMessages: () => set(state => ({
-        chat: { ...state.chat, messages: [] }
+        chat: { ...state.chat, messages: [], error: null }
       })),
 
       loadSessionMessages: async (sessionId: string) => {
-        set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
+          set(state => ({ chat: { ...state.chat, isLoading: true, error: null } }));
+          
           const response = await apiClient.get<Message[]>(
             API_ENDPOINTS.SESSION.HISTORY(sessionId)
           );
@@ -132,27 +132,50 @@ export const useStore = create<StoreState & StoreActions>()(
             chat: { 
               ...state.chat, 
               isLoading: false,
-              error: error instanceof Error ? error.message : 'Error loading messages',
-              messages: []
+              error: error instanceof Error ? error.message : 'Error loading messages'
             }
           }));
           throw error;
         }
       },
 
-      setCurrentSession: (session) => set(state => ({
-        session: { 
-          ...state.session, 
-          currentSessionId: session.id 
-        }
-      })),
+      setCurrentSession: async (session) => {
+        try {
+          set(state => ({
+            session: { 
+              ...state.session, 
+              currentSessionId: session.id,
+              error: null
+            }
+          }));
 
-      setSessions: (sessionsOrUpdater) => set(state => ({
+          // Charger les messages de la session
+          const messages = await apiClient.get<Message[]>(
+            API_ENDPOINTS.SESSION.HISTORY(session.id)
+          );
+
+          set(state => ({
+            chat: {
+              ...state.chat,
+              messages: messages || []
+            }
+          }));
+        } catch (error) {
+          set(state => ({
+            session: {
+              ...state.session,
+              error: error instanceof Error ? error.message : 'Error setting session'
+            }
+          }));
+          throw error;
+        }
+      },
+
+      setSessions: (sessions) => set(state => ({
         session: {
           ...state.session,
-          sessions: typeof sessionsOrUpdater === 'function'
-            ? sessionsOrUpdater(state.session.sessions)
-            : sessionsOrUpdater
+          sessions,
+          error: null
         }
       })),
 
@@ -166,16 +189,13 @@ export const useStore = create<StoreState & StoreActions>()(
 
       clearError: () => set(state => ({
         ui: { ...state.ui, error: null }
-      })),
-
-      resetStore: () => set(initialState)
+      }))
     }),
     {
       name: 'chat-store',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        ui: { theme: state.ui.theme },
-        session: { currentSessionId: state.session.currentSessionId }
+        ui: { theme: state.ui.theme }
       })
     }
   )
