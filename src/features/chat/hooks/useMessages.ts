@@ -46,14 +46,16 @@ export function useMessages(): UseMessagesReturn {
     }
   }, [sessionId, userId, store]);
 
+  const wrappedSendMessage = useCallback(async (content: string) => {
+    if (!sessionId) throw new Error('Session ID required');
+    await store.sendMessage(content, { sessionId });
+  }, [sessionId, store]);
+
   return {
     messages: store.messages,
     isLoading: store.isLoading,
     error: store.error,
-    sendMessage: async (content: string) => {
-      if (!sessionId) throw new Error('Session ID required');
-      await store.sendMessage(content, { sessionId });
-    },
+    sendMessage: wrappedSendMessage,
     loadMoreMessages,
     clearMessages: store.clearMessages,
     setError: store.setError
