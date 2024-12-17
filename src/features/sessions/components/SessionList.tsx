@@ -2,10 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, MessageSquare, Loader2, Archive } from 'lucide-react';
+import { Plus, MessageSquare, Loader2 } from 'lucide-react';
 import { useStore } from '../../../store';
 import { useTheme } from '../../../shared/hooks/useTheme';
-import { formatRelativeTime } from '../../../shared/utils/dateFormatter';
 import { apiClient } from '../../../core/api/client';
 import { API_ENDPOINTS } from '../../../core/api/endpoints';
 import type { Session } from '../../../core/session/types';
