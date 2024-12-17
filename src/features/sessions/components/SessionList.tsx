@@ -218,5 +218,3 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 };
 
 export default SessionList;
-
-export default SessionList;
