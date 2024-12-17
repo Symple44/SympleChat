@@ -6,10 +6,9 @@ interface RequestOptions extends RequestInit {
 
 const getBaseUrl = () => {
   const isDev = import.meta.env.DEV;
-  if (isDev && import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  return `${window.location.origin}/api`;
+  return isDev && import.meta.env.VITE_API_URL 
+    ? import.meta.env.VITE_API_URL 
+    : `${window.location.origin}/api`;
 };
 
 export class ApiClient {
@@ -27,25 +26,23 @@ export class ApiClient {
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { params, headers, ...requestInit } = options;
 
-    // Construction de l'URL complète
-    let fullUrl = endpoint;
-    if (!endpoint.startsWith('http')) {
-      fullUrl = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-    }
+    let fullUrl = endpoint.startsWith('http') 
+      ? endpoint 
+      : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
     // Ajout des paramètres de requête
-    const url = new URL(fullUrl);
     if (params) {
+      const url = new URL(fullUrl);
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value != null) {
           url.searchParams.append(key, value.toString());
         }
       });
+      fullUrl = url.toString();
     }
 
     try {
-      console.log('Fetching:', url.toString()); // Debug log
-      const response = await fetch(url.toString(), {
+      const response = await fetch(fullUrl, {
         ...requestInit,
         headers: {
           ...this.defaultHeaders,
@@ -55,14 +52,12 @@ export class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw {
-          status: response.status,
-          message: response.statusText,
-          data: errorData
-        };
+        throw new Error(
+          errorData?.message || `Request failed with status ${response.status}`
+        );
       }
 
-      return response.json();
+      return await response.json();
     } catch (error) {
       console.error('API Request failed:', error);
       throw error instanceof Error ? error : new Error('Unknown API error');
@@ -70,10 +65,7 @@ export class ApiClient {
   }
 
   public async get<T>(endpoint: string, options?: Omit<RequestOptions, 'body' | 'method'>) {
-    return this.request<T>(endpoint, { 
-      ...options, 
-      method: 'GET' 
-    });
+    return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
   public async post<T>(
@@ -101,14 +93,10 @@ export class ApiClient {
   }
 
   public async delete<T>(endpoint: string, options?: Omit<RequestOptions, 'body' | 'method'>) {
-    return this.request<T>(endpoint, { 
-      ...options, 
-      method: 'DELETE' 
-    });
+    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 }
 
-// Instance par défaut
 export const apiClient = new ApiClient();
 
 export default apiClient;
