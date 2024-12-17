@@ -13,8 +13,8 @@ export const API_ENDPOINTS = {
   },
   USER: {
     // Assurez-vous que cet endpoint retourne bien les données avec les IDs de session
-    HISTORY: (userId: string) => `/api/history/user/${userId}`,
-    SESSIONS: (userId: string) => `/api/users/${userId}/sessions`
+    HISTORY: (userId: string) => `/history/user/${userId}`,
+    SESSIONS: (userId: string) => `/users/${userId}/sessions`
   }
 };
 
