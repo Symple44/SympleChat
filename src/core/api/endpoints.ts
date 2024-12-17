@@ -1,6 +1,7 @@
 // src/core/api/endpoints.ts
 
 // Définition des endpoints de l'API
+// Définition des endpoints de l'API
 export const API_ENDPOINTS = {
   CHAT: {
     SEND: '/chat',
@@ -18,14 +19,6 @@ export const API_ENDPOINTS = {
   HEALTH: '/health'
 } as const;
 
-// Types pour l'API
 export type ApiEndpoints = typeof API_ENDPOINTS;
 
-// Helper type pour obtenir le type d'un endpoint spécifique
-export type EndpointPath<
-  T extends keyof ApiEndpoints,
-  K extends keyof ApiEndpoints[T]
-> = ApiEndpoints[T][K];
-
 export default API_ENDPOINTS;
-
