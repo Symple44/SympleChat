@@ -13,8 +13,7 @@ export const API_ENDPOINTS = {
     HISTORY: (sessionId: string) => `/history/session/${sessionId}`
   },
   USER: {
-    HISTORY: (userId: string) => `/history/user/${userId}`,
-    CHAT_HISTORY: (userId: string) => `/history/session`
+    HISTORY: (userId: string) => `/history/user/${userId}`
   },
   HEALTH: '/health'
 } as const;
