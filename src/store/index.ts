@@ -69,13 +69,13 @@ export const useStore = create<StoreState & StoreActions>()(
     (set) => ({
       ...initialState,
 
-      sendMessage: async (content: string, sessionId: string) => {
+      sendMessage: async (content: string, sessionId: string): Promise<void> => {
         try {
           set(state => ({ chat: { ...state.chat, isLoading: true, error: null } }));
           
           // Format the request according to API specifications
           const request = {
-            user_id: APP_CONFIG.CHAT.DEFAULT_USER_ID, // Or get from state/props
+            user_id: APP_CONFIG.CHAT.DEFAULT_USER_ID,
             query: content,
             session_id: sessionId,
             language: APP_CONFIG.CHAT.DEFAULT_LANGUAGE,
@@ -118,7 +118,6 @@ export const useStore = create<StoreState & StoreActions>()(
             }
           }));
 
-          return response;
         } catch (error) {
           set(state => ({ 
             chat: { 
