@@ -4,7 +4,6 @@ export const API_ENDPOINTS = {
   CHAT: {
     SEND: '/chat',
     STREAM: '/chat/stream',
-    // On conserve HISTORY car il est utilisé pour la récupération de l'historique des messages
     HISTORY: '/chat/history'
   },
   SESSION: {
