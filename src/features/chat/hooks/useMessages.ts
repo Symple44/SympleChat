@@ -1,6 +1,6 @@
 // src/features/chat/hooks/useMessages.ts
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
 import { apiClient } from '../../../core/api/client';
@@ -46,61 +46,14 @@ export function useMessages(): UseMessagesReturn {
     }
   }, [sessionId, userId, store]);
 
-  const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || !sessionId || store.isLoading) {
-      return;
-    }
-
-    try {
-      const newMessage: Message = {
-        id: crypto.randomUUID(),
-        content,
-        type: 'user',
-        sessionId,
-        timestamp: new Date().toISOString()
-      };
-
-      // Optimistic update
-      store.addMessage(newMessage);
-
-      const response = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
-        content,
-        sessionId,
-        userId
-      });
-
-      // Add assistant response
-      store.addMessage(response);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      store.setError('Erreur lors de l\'envoi du message');
-      throw error;
-    }
-  }, [sessionId, userId, store]);
-
-  // Charger l'historique initial
-  useEffect(() => {
-    if (sessionId && userId) {
-      store.loadSessionMessages(sessionId).catch(error => {
-        console.error('Error loading session messages:', error);
-      });
-    }
-  }, [sessionId, userId]);
-
-  // Nettoyer les messages lors du démontage
-  useEffect(() => {
-    return () => {
-      if (!sessionId) {
-        store.clearMessages();
-      }
-    };
-  }, [sessionId]);
-
   return {
     messages: store.messages,
     isLoading: store.isLoading,
     error: store.error,
-    sendMessage: store.sendMessage,
+    sendMessage: async (content: string) => {
+      if (!sessionId) throw new Error('Session ID required');
+      await store.sendMessage(content, { sessionId });
+    },
     loadMoreMessages,
     clearMessages: store.clearMessages,
     setError: store.setError
