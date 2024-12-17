@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, MessageSquare, Loader2 } from 'lucide-react';
-import { useStore } from '../../../store';
-import { useTheme } from '../../../shared/hooks/useTheme';
-import { apiClient } from '../../../core/api/client';
-import { API_ENDPOINTS } from '../../../core/api/endpoints';
-import type { Session } from '../../../core/session/types';
+import { useStore } from '@/store';
+import { useTheme } from '@/shared/hooks/useTheme';
+import { apiClient } from '@/core/api/client';
+import { API_ENDPOINTS } from '@/core/api/endpoints';
+import { APP_CONFIG } from '@/config/app.config';
+import type { Session } from '@/core/session/types';
 
 const SessionList: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +22,12 @@ const SessionList: React.FC = () => {
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const setSessions = useStore(state => state.setSessions);
 
+  const debug = (message: string, data?: any) => {
+    if (APP_CONFIG.UI.DEBUG) {
+      console.log(`[SessionList] ${message}`, data || '');
+    }
+  };
+
   const loadSessions = async () => {
     if (!userId) {
       setError("ID utilisateur non disponible");
@@ -29,10 +36,14 @@ const SessionList: React.FC = () => {
     }
 
     try {
+      debug('Chargement des sessions pour', userId);
       setIsLoading(true);
+      
       const response = await apiClient.get<any[]>(
         API_ENDPOINTS.USER.HISTORY(userId)
       );
+
+      debug('Sessions reçues:', response);
 
       const formattedSessions: Session[] = response.map(history => ({
         id: history.session_id,
@@ -47,6 +58,7 @@ const SessionList: React.FC = () => {
         }
       }));
 
+      debug('Sessions formatées:', formattedSessions);
       setSessions(formattedSessions);
       setError(null);
     } catch (err) {
@@ -58,24 +70,24 @@ const SessionList: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    void loadSessions();
-  }, [userId]);
-
-  const handleSessionClick = async (session: Session) => {
+  const handleSessionSelect = async (session: Session) => {
+    debug('Clic sur la session', session);
     try {
-      console.log('Sélection de la session:', session.id);
+      setError(null);
+      debug('Mise à jour session courante');
       await setCurrentSession(session);
+      
       const path = `/${userId}/session/${session.id}`;
-      console.log('Navigation vers:', path);
-      navigate(path);
+      debug('Navigation vers', path);
+      navigate(path, { replace: true });
     } catch (err) {
-      console.error('Erreur lors de la sélection de la session:', err);
+      console.error('Erreur sélection session:', err);
       setError('Impossible de sélectionner cette session');
     }
   };
 
-  const handleNewSessionClick = async () => {
+  const handleNewSession = async () => {
+    debug('Création nouvelle session');
     if (!userId) {
       setError("ID utilisateur non disponible");
       return;
@@ -83,31 +95,38 @@ const SessionList: React.FC = () => {
 
     try {
       setIsLoading(true);
-      console.log('Création d\'une nouvelle session...');
       
       const response = await apiClient.post<{ session_id: string }>(
         API_ENDPOINTS.SESSION.CREATE,
         { user_id: userId }
       );
 
-      if (response && response.session_id) {
-        const newSession: Session = {
-          id: response.session_id,
-          userId,
-          status: 'active',
-          metadata: {
-            title: "Nouvelle conversation",
-            messageCount: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            language: 'fr'
-          }
-        };
+      debug('Réponse création session:', response);
 
-        setSessions((prevSessions: Session[]) => [newSession, ...prevSessions]);
-        await setCurrentSession(newSession);
-        navigate(`/${userId}/session/${newSession.id}`);
+      if (!response?.session_id) {
+        throw new Error('ID de session non reçu');
       }
+
+      const newSession: Session = {
+        id: response.session_id,
+        userId,
+        status: 'active',
+        metadata: {
+          title: "Nouvelle conversation",
+          messageCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          language: 'fr'
+        }
+      };
+
+      debug('Nouvelle session créée:', newSession);
+      setSessions(prevSessions => [newSession, ...prevSessions]);
+      await setCurrentSession(newSession);
+      
+      const path = `/${userId}/session/${newSession.id}`;
+      debug('Navigation vers', path);
+      navigate(path, { replace: true });
     } catch (err) {
       console.error('Erreur création session:', err);
       setError('Impossible de créer une nouvelle session');
@@ -115,6 +134,10 @@ const SessionList: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadSessions();
+  }, [userId]);
 
   if (isLoading) {
     return (
@@ -131,13 +154,12 @@ const SessionList: React.FC = () => {
           Sessions de chat
         </h1>
         <button
-          onClick={handleNewSessionClick}
+          type="button"
+          onClick={() => void handleNewSession()}
           className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg 
                    hover:bg-blue-700 active:bg-blue-800 transform active:scale-95
-                   transition-all duration-150 ease-in-out cursor-pointer
-                   disabled:opacity-50 disabled:cursor-not-allowed
+                   transition-all duration-150 ease-in-out cursor-pointer select-none
                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          disabled={isLoading}
         >
           <Plus className="w-5 h-5" />
           <span>Nouvelle session</span>
@@ -163,8 +185,14 @@ const SessionList: React.FC = () => {
         {sessions.map((session) => (
           <button
             key={session.id}
-            onClick={() => void handleSessionClick(session)}
-            className={`w-full p-4 rounded-lg border group
+            type="button"
+            onClick={() => void handleSessionSelect(session)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                void handleSessionSelect(session);
+              }
+            }}
+            className={`w-full p-4 rounded-lg border group relative
               transition-all duration-150 ease-in-out
               transform hover:scale-[1.01] active:scale-[0.99]
               focus:outline-none focus:ring-2 focus:ring-blue-500
