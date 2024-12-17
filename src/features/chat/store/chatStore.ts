@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from '../../../core/api/endpoints';
 import type { ChatState, Message, SendMessageOptions } from '../types/chat';
 
 interface ChatStore extends ChatState {
-  sendMessage: (content: string, options?: SendMessageOptions) => Promise<Message>;
+  sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   clearMessages: () => void;
@@ -24,16 +24,14 @@ const initialState: ChatState = {
   currentSessionId: null
 };
 
-type State = ChatStore;
-
-export const useChatStore = create<State>()(
+export const useChatStore = create<ChatStore>()(
   persist(
     (set, get) => ({
       ...initialState,
 
-      sendMessage: async (content: string, options?: SendMessageOptions): Promise<Message> => {
-        const state = get();
-        const sessionId = options?.sessionId || state.currentSessionId;
+      sendMessage: async (content: string, options?: SendMessageOptions) => {
+        const currentSessionId = get().currentSessionId;
+        const sessionId = options?.sessionId || currentSessionId;
 
         if (!sessionId) {
           throw new Error('No active session');
@@ -42,7 +40,7 @@ export const useChatStore = create<State>()(
         set({ isLoading: true, error: null });
 
         try {
-          const tempMessage: Message = {
+          const newMessage: Message = {
             id: crypto.randomUUID(),
             content,
             type: 'user',
@@ -50,26 +48,27 @@ export const useChatStore = create<State>()(
             sessionId
           };
 
+          // Optimistic update
           set(state => ({
-            messages: [...state.messages, tempMessage]
+            messages: [...state.messages, newMessage]
           }));
 
+          // Send to server
           const apiResponse = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
             content,
             sessionId,
             metadata: options?.metadata
           });
 
+          // Update with server response
           set(state => ({
             messages: [
-              ...state.messages.filter(m => m.id !== tempMessage.id),
+              ...state.messages.filter(m => m.id !== newMessage.id),
               apiResponse
             ],
             isLoading: false
           }));
 
-          return apiResponse;
-          
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
           set({ error: errorMessage, isLoading: false });
@@ -86,13 +85,17 @@ export const useChatStore = create<State>()(
           error: null
         })),
       
-      clearMessages: () => set({ messages: [], error: null }),
+      clearMessages: () => 
+        set({ messages: [], error: null }),
       
-      setError: (error) => set({ error }),
+      setError: (error) => 
+        set({ error }),
       
-      setLoading: (isLoading) => set({ isLoading }),
+      setLoading: (isLoading) => 
+        set({ isLoading }),
       
-      setSessionId: (sessionId) => set({ currentSessionId: sessionId }),
+      setSessionId: (sessionId) => 
+        set({ currentSessionId: sessionId }),
 
       loadSessionMessages: async (sessionId: string) => {
         set({ isLoading: true, error: null });
