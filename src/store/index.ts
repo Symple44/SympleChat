@@ -74,18 +74,15 @@ export const useStore = create<StoreState & StoreActions>()(
       sendMessage: async (content: string, sessionId: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          const newMessage: Message = {
-            id: crypto.randomUUID(),
+          const response = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
             content,
-            sessionId,
-            type: 'user',
-            timestamp: new Date().toISOString()
-          };
+            sessionId
+          });
 
           set(state => ({
             chat: {
               ...state.chat,
-              messages: [...state.chat.messages, newMessage],
+              messages: [...state.chat.messages, response],
               isLoading: false
             }
           }));
@@ -119,14 +116,14 @@ export const useStore = create<StoreState & StoreActions>()(
       loadSessionMessages: async (sessionId: string) => {
         set(state => ({ chat: { ...state.chat, isLoading: true } }));
         try {
-          const messages = await apiClient.get<Message[]>(
-            API_ENDPOINTS.SESSION.MESSAGES(sessionId)
+          const response = await apiClient.get<Message[]>(
+            API_ENDPOINTS.SESSION.HISTORY(sessionId)
           );
 
           set(state => ({ 
             chat: { 
               ...state.chat,
-              messages: messages || [],
+              messages: response || [],
               isLoading: false 
             }
           }));
@@ -146,8 +143,7 @@ export const useStore = create<StoreState & StoreActions>()(
       setCurrentSession: (session) => set(state => ({
         session: { 
           ...state.session, 
-          currentSessionId: session.id,
-          error: null
+          currentSessionId: session.id 
         }
       })),
 
@@ -156,16 +152,12 @@ export const useStore = create<StoreState & StoreActions>()(
           ...state.session,
           sessions: typeof sessionsOrUpdater === 'function'
             ? sessionsOrUpdater(state.session.sessions)
-            : sessionsOrUpdater,
-          error: null
+            : sessionsOrUpdater
         }
       })),
 
       setTheme: (isDark) => set(state => ({
-        ui: { 
-          ...state.ui, 
-          theme: isDark ? 'dark' : 'light' 
-        }
+        ui: { ...state.ui, theme: isDark ? 'dark' : 'light' }
       })),
 
       setError: (error) => set(state => ({
