@@ -9,7 +9,7 @@ export const API_ENDPOINTS = {
   SESSION: {
     CREATE: '/sessions/new',
     GET: (id: string) => `/sessions/${id}`,
-    HISTORY: (sessionId: string) => `/sessions/${sessionId}/history`
+    HISTORY: (sessionId: string) => `/history/session/${sessionId}` 
   },
   USER: {
     // Assurez-vous que cet endpoint retourne bien les données avec les IDs de session
