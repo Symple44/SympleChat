@@ -7,7 +7,6 @@ import { API_ENDPOINTS } from '../../../core/api/endpoints';
 import type { ChatState, Message, SendMessageOptions } from '../types/chat';
 
 interface ChatStore extends ChatState {
-  // Actions
   sendMessage: (content: string, options?: SendMessageOptions) => Promise<Message>;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
@@ -15,8 +14,6 @@ interface ChatStore extends ChatState {
   setError: (error: string | null) => void;
   setLoading: (isLoading: boolean) => void;
   setSessionId: (sessionId: string | null) => void;
-  
-  // Session actions
   loadSessionMessages: (sessionId: string) => Promise<void>;
 }
 
@@ -27,14 +24,16 @@ const initialState: ChatState = {
   currentSessionId: null
 };
 
-export const useChatStore = create<ChatStore>()(
+type State = ChatStore;
+
+export const useChatStore = create<State>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
-      sendMessage: async (content: string, options?: SendMessageOptions) => {
-        const { currentSessionId } = useChatStore.getState();
-        const sessionId = options?.sessionId || currentSessionId;
+      sendMessage: async (content: string, options?: SendMessageOptions): Promise<Message> => {
+        const state = get();
+        const sessionId = options?.sessionId || state.currentSessionId;
 
         if (!sessionId) {
           throw new Error('No active session');
@@ -43,7 +42,6 @@ export const useChatStore = create<ChatStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          // Optimistic update
           const tempMessage: Message = {
             id: crypto.randomUUID(),
             content,
@@ -56,23 +54,21 @@ export const useChatStore = create<ChatStore>()(
             messages: [...state.messages, tempMessage]
           }));
 
-          // Envoyer la requête
-          const response = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
+          const apiResponse = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
             content,
             sessionId,
             metadata: options?.metadata
           });
 
-          // Mettre à jour avec la réponse du serveur
           set(state => ({
             messages: [
               ...state.messages.filter(m => m.id !== tempMessage.id),
-              response
+              apiResponse
             ],
             isLoading: false
           }));
 
-          return response;
+          return apiResponse;
           
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
@@ -81,10 +77,10 @@ export const useChatStore = create<ChatStore>()(
         }
       },
 
-      setMessages: (messages: Message[]) => 
+      setMessages: (messages) => 
         set({ messages, error: null }),
       
-      addMessage: (message: Message) => 
+      addMessage: (message) => 
         set(state => ({ 
           messages: [...state.messages, message],
           error: null
@@ -92,22 +88,22 @@ export const useChatStore = create<ChatStore>()(
       
       clearMessages: () => set({ messages: [], error: null }),
       
-      setError: (error: string | null) => set({ error }),
+      setError: (error) => set({ error }),
       
-      setLoading: (isLoading: boolean) => set({ isLoading }),
+      setLoading: (isLoading) => set({ isLoading }),
       
-      setSessionId: (sessionId: string | null) => set({ currentSessionId: sessionId }),
+      setSessionId: (sessionId) => set({ currentSessionId: sessionId }),
 
       loadSessionMessages: async (sessionId: string) => {
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiClient.get<Message[]>(
+          const messages = await apiClient.get<Message[]>(
             API_ENDPOINTS.SESSION.HISTORY(sessionId)
           );
 
           set({ 
-            messages: response || [],
+            messages: messages || [],
             currentSessionId: sessionId,
             isLoading: false
           });
