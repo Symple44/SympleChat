@@ -6,8 +6,8 @@ const getBaseUrl = () => {
   const isDev = import.meta.env.DEV;
 
   return {
-    API_BASE: isDev ? 'http://192.168.0.15:8000' : 'https://chat.symple.fr',
-    WS_BASE: isDev ? 'ws://192.168.0.15:8000' : 'wss://chat.symple.fr',
+    API_BASE: 'http://192.168.0.15:8000',
+    WS_BASE: 'ws://192.168.0.15:8000',
     APP_BASE: isDev ? 'http://localhost:3000' : 'https://chat.symple.fr'
   };
 };
