@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
 // Types pour l'API
 export type ApiEndpoints = typeof API_ENDPOINTS;
 
-/ Helper pour obtenir le type d'un endpoint spécifique
+// Helper type pour obtenir le type d'un endpoint spécifique
 export type EndpointPath<
   T extends keyof ApiEndpoints,
   K extends keyof ApiEndpoints[T]
