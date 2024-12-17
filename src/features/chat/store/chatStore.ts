@@ -29,11 +29,11 @@ const initialState: ChatState = {
 
 export const useChatStore = create<ChatStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
 
       sendMessage: async (content: string, options?: SendMessageOptions) => {
-        const { currentSessionId } = get();
+        const { currentSessionId } = useChatStore.getState();
         const sessionId = options?.sessionId || currentSessionId;
 
         if (!sessionId) {
@@ -43,7 +43,8 @@ export const useChatStore = create<ChatStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const message: Message = {
+          // Optimistic update
+          const tempMessage: Message = {
             id: crypto.randomUUID(),
             content,
             type: 'user',
@@ -51,8 +52,9 @@ export const useChatStore = create<ChatStore>()(
             sessionId
           };
 
-          // Ajouter immédiatement le message utilisateur
-          get().addMessage(message);
+          set(state => ({
+            messages: [...state.messages, tempMessage]
+          }));
 
           // Envoyer la requête
           const response = await apiClient.post<Message>(API_ENDPOINTS.CHAT.SEND, {
@@ -61,28 +63,34 @@ export const useChatStore = create<ChatStore>()(
             metadata: options?.metadata
           });
 
-          // Ajouter la réponse
-          get().addMessage(response);
+          // Mettre à jour avec la réponse du serveur
+          set(state => ({
+            messages: [
+              ...state.messages.filter(m => m.id !== tempMessage.id),
+              response
+            ],
+            isLoading: false
+          }));
 
-          return message;
+          return response;
           
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
-          set({ error: errorMessage });
+          set({ error: errorMessage, isLoading: false });
           throw error;
-        } finally {
-          set({ isLoading: false });
         }
       },
 
-      setMessages: (messages: Message[]) => set({ messages }),
+      setMessages: (messages: Message[]) => 
+        set({ messages, error: null }),
       
       addMessage: (message: Message) => 
         set(state => ({ 
-          messages: [...state.messages, message] 
+          messages: [...state.messages, message],
+          error: null
         })),
       
-      clearMessages: () => set({ messages: [] }),
+      clearMessages: () => set({ messages: [], error: null }),
       
       setError: (error: string | null) => set({ error }),
       
@@ -94,20 +102,23 @@ export const useChatStore = create<ChatStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const messages = await apiClient.get<Message[]>(
-  API_ENDPOINTS.SESSION.HISTORY(sessionId)
-);
+          const response = await apiClient.get<Message[]>(
+            API_ENDPOINTS.SESSION.HISTORY(sessionId)
+          );
 
           set({ 
-            messages: response,
-            currentSessionId: sessionId 
+            messages: response || [],
+            currentSessionId: sessionId,
+            isLoading: false
           });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to load messages';
-          set({ error: errorMessage });
+          set({ 
+            error: errorMessage, 
+            isLoading: false,
+            messages: []
+          });
           throw error;
-        } finally {
-          set({ isLoading: false });
         }
       }
     }),
