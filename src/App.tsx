@@ -5,7 +5,6 @@ import { useNavigate, useParams, Outlet } from 'react-router-dom';
 import { useStore } from './store';
 import { useWebSocket } from './shared/hooks/useWebSocket';
 import { updatePageTitle } from './shared/utils/pageTitle';
-//import { APP_CONFIG } from './config/app.config';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -14,12 +13,10 @@ const App: React.FC = () => {
   const setError = useStore(state => state.setError);
   const { isConnected } = useWebSocket();
 
-  // Update page title on mount
   useEffect(() => {
     updatePageTitle();
   }, []);
 
-  // Session navigation effect
   useEffect(() => {
     if (sessionId) {
       console.log('Navigation vers session:', sessionId);
@@ -27,7 +24,6 @@ const App: React.FC = () => {
     }
   }, [sessionId, userId, navigate]);
 
-  // WebSocket connection status effect
   useEffect(() => {
     if (!isConnected) {
       setError('Connexion perdue');
@@ -36,16 +32,19 @@ const App: React.FC = () => {
     }
   }, [isConnected, setError]);
 
+  // Voici la modification à faire dans le return
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-      <Outlet context={{ userId, sessionId, isConnected }} />
+    <>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <Outlet context={{ userId, sessionId, isConnected }} />
+      </div>
       
-      {/* Error Toast Portal Container */}
-      <div id="toast-root" className="fixed bottom-4 right-4 z-50" />
+      {/* Portail pour les toasts */}
+      <div id="toast-root" className="fixed bottom-4 right-4 z-40" />
       
-      {/* Modal Portal Container */}
-      <div id="modal-root" className="fixed inset-0 z-50" />
-    </div>
+      {/* Portail pour les modals */}
+      <div id="modal-root" className="fixed inset-0 z-30" />
+    </>
   );
 };
 
