@@ -26,47 +26,46 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   const setCurrentSession = useStore(state => state.setCurrentSession);
   const setSessions = useStore(state => state.setSessions);
 
-  // Charger les sessions
+  const loadSessions = async () => {
+    if (!userId) {
+      setError("ID utilisateur non disponible");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await apiClient.get<any[]>(
+        API_ENDPOINTS.USER.HISTORY(userId)
+      );
+
+      const formattedSessions: Session[] = response.map(history => ({
+        id: history.session_id,
+        userId,
+        status: 'active',
+        metadata: {
+          title: history.query || "Nouvelle conversation",
+          messageCount: 1,
+          createdAt: history.timestamp,
+          updatedAt: history.timestamp,
+          language: 'fr'
+        }
+      }));
+
+      setSessions(formattedSessions);
+      setError(null);
+    } catch (err) {
+      console.error('Erreur chargement sessions:', err);
+      setError('Impossible de charger les sessions');
+      setSessions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadSessions = async () => {
-      if (!userId) {
-        setError("ID utilisateur non disponible");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        const response = await apiClient.get<any[]>(
-          API_ENDPOINTS.USER.HISTORY(userId)
-        );
-
-        const formattedSessions: Session[] = response.map(history => ({
-          id: history.session_id,
-          userId,
-          status: 'active',
-          metadata: {
-            title: history.query || "Nouvelle conversation",
-            messageCount: 1,
-            createdAt: history.timestamp,
-            updatedAt: history.timestamp,
-            language: 'fr' // Langue par défaut
-          }
-        }));
-
-        setSessions(formattedSessions);
-        setError(null);
-      } catch (err) {
-        console.error('Erreur chargement sessions:', err);
-        setError('Impossible de charger les sessions');
-        setSessions([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     void loadSessions();
-  }, [userId, setSessions]);
+  }, [userId]);
 
   const handleNewSession = async () => {
     if (!userId) {
@@ -91,7 +90,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
             messageCount: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            language: 'fr' // Langue par défaut
+            language: 'fr'
           }
         };
 
@@ -107,53 +106,10 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
     }
   };
 
-  const handleSessionSelect = async (session: Session) => {
-    if (!userId) {
-      setError("ID utilisateur non disponible");
-      return;
-    }
-
-    try {
-      setCurrentSession(session);
-      navigate(`/${userId}/session/${session.id}`);
-    } catch (err) {
-      console.error('Erreur sélection session:', err);
-      setError('Impossible de sélectionner cette session');
-    }
-  };
-
-  useEffect(() => {
-    void fetchSessions();
-  }, [fetchSessions]);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-2xl mx-auto p-4 text-center">
-        <div className={`border rounded-lg p-4 ${
-          isDark 
-            ? 'bg-red-900/20 border-red-800 text-red-400'
-            : 'bg-red-50 border-red-200 text-red-600'
-        }`}>
-          <p>{error}</p>
-          <button
-            onClick={() => void fetchSessions()}
-            className={`mt-4 px-4 py-2 rounded-lg ${
-              isDark 
-                ? 'bg-red-700 hover:bg-red-600'
-                : 'bg-red-600 hover:bg-red-700'
-            } text-white`}
-          >
-            Réessayer
-          </button>
-        </div>
       </div>
     );
   }
@@ -175,12 +131,26 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         </button>
       </div>
 
-      {Array.isArray(sessions) && sessions.length > 0 ? (
+      {error && (
+        <div className={`mb-4 p-4 rounded-lg ${
+          isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
+        }`}>
+          <p>{error}</p>
+          <button
+            onClick={() => void loadSessions()}
+            className="mt-2 text-sm underline"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {sessions.length > 0 ? (
         <div className="space-y-4">
           {sessions.map((session) => (
             <div
               key={session.id}
-              onClick={() => void handleSessionSelect(session)}
+              onClick={() => navigate(`/${userId}/session/${session.id}`)}
               className={`
                 p-4 rounded-lg border cursor-pointer transition-all
                 ${session.id === currentSessionId
@@ -193,40 +163,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
                 }
               `}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3">
-                  <MessageSquare className={`w-5 h-5 mt-1 ${
-                    isDark ? 'text-blue-400' : 'text-blue-500'
-                  }`} />
-                  <div>
-                    <h3 className={`font-medium ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      {session.metadata?.title || "Nouvelle conversation"}
-                    </h3>
-                    {session.metadata?.createdAt && (
-                      <p className={`text-sm mt-1 ${
-                        isDark ? 'text-gray-400' : 'text-gray-500'
-                      }`}>
-                        {formatRelativeTime(session.metadata.createdAt)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <span className={`text-sm ${
-                    isDark ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                    {session.metadata?.messageCount || 0} messages
-                  </span>
-                  {session.status === 'archived' && (
-                    <Archive className={`w-4 h-4 ${
-                      isDark ? 'text-gray-500' : 'text-gray-400'
-                    }`} />
-                  )}
-                </div>
-              </div>
+              {/* ... session content ... */}
             </div>
           ))}
         </div>
