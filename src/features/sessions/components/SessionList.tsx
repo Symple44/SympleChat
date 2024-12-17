@@ -39,22 +39,28 @@ const SessionList: React.FC = () => {
     debug('Chargement des sessions pour', userId);
     setIsLoading(true);
     
-    const response = await apiClient.get<Session[]>(API_ENDPOINTS.USER.HISTORY(userId));
+    const response = await apiClient.get<Array<{
+      id: string;
+      query: string;
+      response: string;
+      timestamp: string;
+      additional_data: any;
+    }>>(API_ENDPOINTS.USER.HISTORY(userId));
 
     debug('Données brutes reçues:', response);
 
-    const formattedSessions: Session[] = response.map(session => ({
-        id: session.id,
-        userId,
-        status: 'active',
-        metadata: {
-          title: session.metadata?.title || "Nouvelle conversation",
-          messageCount: session.metadata?.messageCount || 0,
-          createdAt: session.metadata?.createdAt || new Date().toISOString(),
-          updatedAt: session.metadata?.updatedAt || new Date().toISOString(),
-          language: 'fr'
-        }
-      }));
+    const formattedSessions: Session[] = response.map(item => ({
+      id: item.id,  // Utilisation directe de l'ID fourni par l'API
+      userId,
+      status: 'active',
+      metadata: {
+        title: item.query || "Nouvelle conversation",
+        messageCount: 1,
+        createdAt: item.timestamp,
+        updatedAt: item.timestamp,
+        language: 'fr'
+      }
+    }));
 
     debug('Sessions formatées:', formattedSessions);
     setSessions(formattedSessions);
