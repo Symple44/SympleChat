@@ -5,10 +5,25 @@
   z-index: 40;
 }
 
-.message-list {
-  z-index: 30;
-}
-
 .message-input {
   z-index: 50;
+}
+
+#chat-root {
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
+}
+
+.message-list {
+  position: relative;
+  z-index: 10;
+}
+
+#modal-root {
+  pointer-events: none;
+}
+
+#modal-root > * {
+  pointer-events: auto;
 }
