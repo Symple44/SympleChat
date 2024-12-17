@@ -18,8 +18,7 @@ export const API_CONFIG = {
     SESSION: {
       CREATE: '/sessions/new',
       GET: (id: string) => `/sessions/${id}`,
-      LIST: '/sessions',
-      DELETE: (id: string) => `/sessions/${id}`
+      HISTORY: (sessionId: string) => `/history/session/${sessionId}`
     },
     USER: {
       HISTORY: (userId: string) => `/history/user/${userId}`,
