@@ -1,5 +1,6 @@
 // src/core/api/endpoints.ts
 
+// Définition des endpoints de l'API
 export const API_ENDPOINTS = {
   CHAT: {
     SEND: '/chat',
@@ -18,6 +19,7 @@ export const API_ENDPOINTS = {
   HEALTH: '/health'
 } as const;
 
+// Types pour l'API
 export type ApiEndpoints = typeof API_ENDPOINTS;
 
 // Helper type pour obtenir le type d'un endpoint spécifique
@@ -26,22 +28,5 @@ export type EndpointPath<
   K extends keyof ApiEndpoints[T]
 > = ApiEndpoints[T][K];
 
-export interface ApiRoutes {
-  chat: {
-    send: typeof API_ENDPOINTS.CHAT.SEND;
-    stream: typeof API_ENDPOINTS.CHAT.STREAM;
-    history: typeof API_ENDPOINTS.CHAT.HISTORY;
-  };
-  session: {
-    create: typeof API_ENDPOINTS.SESSION.CREATE;
-    get: (id: string) => string;
-    list: typeof API_ENDPOINTS.SESSION.LIST;
-    delete: (id: string) => string;
-  };
-  user: {
-    history: (userId: string) => string;
-    sessions: (userId: string) => string;
-  };
-  health: typeof API_ENDPOINTS.HEALTH;
-}
+export default API_ENDPOINTS;
 
