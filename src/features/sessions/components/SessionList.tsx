@@ -29,46 +29,50 @@ const SessionList: React.FC = () => {
   };
 
   const loadSessions = async () => {
-    if (!userId) {
-      setError("ID utilisateur non disponible");
-      setIsLoading(false);
-      return;
-    }
+  if (!userId) {
+    setError("ID utilisateur non disponible");
+    setIsLoading(false);
+    return;
+  }
 
-    try {
-      debug('Chargement des sessions pour', userId);
-      setIsLoading(true);
-      
-      const response = await apiClient.get<any[]>(
-        API_ENDPOINTS.USER.HISTORY(userId)
-      );
+  try {
+    debug('Chargement des sessions pour', userId);
+    setIsLoading(true);
+    
+    const response = await apiClient.get<Array<{
+      id: string;
+      query: string;
+      response: string;
+      timestamp: string;
+      additional_data: any;
+    }>>(API_ENDPOINTS.USER.HISTORY(userId));
 
-      debug('Sessions reçues:', response);
+    debug('Données brutes reçues:', response);
 
-      const formattedSessions: Session[] = response.map(history => ({
-        id: history.session_id,
-        userId,
-        status: 'active',
-        metadata: {
-          title: history.query || "Nouvelle conversation",
-          messageCount: 1,
-          createdAt: history.timestamp,
-          updatedAt: history.timestamp,
-          language: 'fr'
-        }
-      }));
+    const formattedSessions: Session[] = response.map(item => ({
+      id: item.id,  // Utilisation directe de l'ID fourni par l'API
+      userId,
+      status: 'active',
+      metadata: {
+        title: item.query || "Nouvelle conversation",
+        messageCount: 1,
+        createdAt: item.timestamp,
+        updatedAt: item.timestamp,
+        language: 'fr'
+      }
+    }));
 
-      debug('Sessions formatées:', formattedSessions);
-      setSessions(formattedSessions);
-      setError(null);
-    } catch (err) {
-      console.error('Erreur chargement sessions:', err);
-      setError('Impossible de charger les sessions');
-      setSessions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    debug('Sessions formatées:', formattedSessions);
+    setSessions(formattedSessions);
+    setError(null);
+  } catch (err) {
+    console.error('Erreur chargement sessions:', err);
+    setError('Impossible de charger les sessions');
+    setSessions([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleSessionSelect = async (session: Session) => {
     debug('Clic sur la session', session);
