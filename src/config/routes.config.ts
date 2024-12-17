@@ -1,10 +1,11 @@
 // src/config/routes.config.ts
+
 import { RouteObject } from 'react-router-dom';
-import React from 'react';
 import { Navigate } from 'react-router-dom';
 import App from '../App';
 import SessionList from '../features/sessions/components/SessionList';
 import ChatContainer from '../features/chat/components/ChatContainer';
+import { APP_CONFIG } from './app.config';
 
 export const ROUTES = {
   HOME: '/',
@@ -18,39 +19,31 @@ export const ROUTES = {
   }
 } as const;
 
-const defaultUserId = 'oweo';
+const defaultUserId = APP_CONFIG.CHAT.DEFAULT_USER_ID;
 
 export const routes: RouteObject[] = [
   {
-    path: ROUTES.HOME,
-    element: React.createElement(Navigate, { 
-      to: `/${defaultUserId}`, 
-      replace: true 
-    })
+    path: '/',
+    element: <Navigate to={`/${defaultUserId}`} replace />
   },
   {
-    path: ROUTES.USER,
-    element: React.createElement(App),
+    path: '/:userId',
+    element: <App />,
     children: [
       {
         path: '',
-        element: React.createElement(SessionList)
+        element: <SessionList />
       },
       {
         path: 'session/:sessionId',
-        element: React.createElement(ChatContainer)
+        element: <ChatContainer />
       }
     ]
   },
   {
     path: '*',
-    element: React.createElement(Navigate, { 
-      to: ROUTES.HOME, 
-      replace: true 
-    })
+    element: <Navigate to="/" replace />
   }
 ];
-
-export const createRouteConfig = (): RouteObject[] => routes;
 
 export default ROUTES;
