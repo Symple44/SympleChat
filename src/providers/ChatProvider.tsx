@@ -87,4 +87,55 @@ const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           title: "Nouvelle conversation",
           messageCount: 0,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOSt
+          updatedAt: new Date().toISOString(),
+          language: 'fr'
+        }
+      };
+
+      storeSetsessions((prevSessions: Session[]) => [newSession, ...prevSessions]);
+      await storeSetCurrentSession(newSession);
+      navigate(`/${userId}/session/${newSession.id}`);
+    } catch (error) {
+      console.error('Erreur création session:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [userId, navigate, storeSetsessions, storeSetCurrentSession, isProcessing]);
+
+  const sendMessage = useCallback(async (content: string) => {
+    if (!userId || !currentSessionId) return;
+
+    try {
+      await storeSendMessage(content, currentSessionId);
+      
+      send('message', {
+        content,
+        userId,
+        sessionId: currentSessionId,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+      throw error;
+    }
+  }, [userId, currentSessionId, storeSendMessage, send]);
+
+  const value = {
+    messages,
+    isLoading: isLoading || isProcessing,
+    error,
+    currentSessionId,
+    sendMessage,
+    handleSessionSelect,
+    handleNewSession
+  };
+
+  return (
+    <ChatContext.Provider value={value}>
+      {children}
+    </ChatContext.Provider>
+  );
+};
+
+export default ChatProvider;
