@@ -2,7 +2,7 @@
 
 const getBaseUrl = () => {
   // Récupère le hostname actuel pour la configuration
-  const hostname = window.location.hostname;
+  //const hostname = window.location.hostname;
   const isDev = import.meta.env.DEV;
 
   return {
