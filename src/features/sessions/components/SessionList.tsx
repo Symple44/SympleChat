@@ -71,6 +71,11 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
     void loadSessions();
   }, [userId]);
 
+  const handleTestClick = () => {
+    console.log('TEST CLICK');
+    alert('Test click ok');
+  };
+
   const handleSessionSelect = (session: Session) => {
     console.log('handleSessionSelect appelé avec:', session);
     try {
@@ -134,8 +139,6 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
     }
   };
 
-  console.log('SessionList rendu avec sessions:', sessions);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -145,29 +148,33 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   }
 
   return (
-    <div className={`max-w-2xl mx-auto p-4 ${className}`}>
+    <div className={`max-w-2xl mx-auto p-4 select-none ${className}`}>
       <div className="flex justify-between items-center mb-6">
         <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Sessions de chat
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <button
             type="button"
-            onClick={() => {
-              console.log('TEST CLICK');
-              alert('Test click ok');
-            }}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            onClick={handleTestClick}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg
+                     hover:bg-green-700 active:bg-green-800
+                     focus:outline-none focus:ring-2 focus:ring-green-500
+                     transition-colors transform active:scale-95
+                     relative z-10 font-medium shadow-sm
+                     hover:shadow-md select-none"
           >
             Test Click
           </button>
           <button
             type="button"
-            onClick={() => {
-              console.log('Click nouvelle session');
-              void handleNewSession();
-            }}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            onClick={handleNewSession}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg 
+                     hover:bg-blue-700 active:bg-blue-800
+                     focus:outline-none focus:ring-2 focus:ring-blue-500
+                     transition-colors transform active:scale-95
+                     relative z-10 font-medium shadow-sm
+                     hover:shadow-md select-none"
           >
             <Plus className="w-5 h-5" />
             <span>Nouvelle session</span>
@@ -182,11 +189,9 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           <p>{error}</p>
           <button
             type="button"
-            onClick={() => {
-              console.log('Clic sur bouton réessayer');
-              void loadSessions();
-            }}
-            className="mt-2 text-sm underline cursor-pointer"
+            onClick={() => void loadSessions()}
+            className="mt-2 text-sm underline hover:text-red-800 
+                     dark:hover:text-red-300 focus:outline-none"
           >
             Réessayer
           </button>
@@ -200,17 +205,18 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
               key={session.id}
               role="button"
               tabIndex={0}
-              onClick={() => {
-                console.log('Clic sur session:', session.id);
-                handleSessionSelect(session);
-              }}
+              onClick={() => handleSessionSelect(session)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   handleSessionSelect(session);
                 }
               }}
               className={`
-                p-4 rounded-lg border transition-all cursor-pointer
+                p-4 rounded-lg border shadow-sm
+                transition-all duration-150 ease-in-out
+                cursor-pointer select-none relative z-10
+                hover:shadow-md active:scale-[0.995]
+                focus:outline-none focus:ring-2 focus:ring-blue-500
                 ${session.id === currentSessionId
                   ? isDark
                     ? 'border-blue-700 bg-blue-900/20'
