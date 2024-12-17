@@ -115,10 +115,9 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
   return (
     <div className={`max-w-2xl mx-auto p-4 ${className}`}>
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className={`text-2xl font-bold ${
-          isDark ? 'text-white' : 'text-gray-900'
-        }`}>
+        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Sessions de chat
         </h1>
         <button
@@ -130,6 +129,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         </button>
       </div>
 
+      {/* Error display */}
       {error && (
         <div className={`mb-4 p-4 rounded-lg ${
           isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
@@ -144,6 +144,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         </div>
       )}
 
+      {/* Sessions list */}
       {sessions.length > 0 ? (
         <div className="space-y-4">
           {sessions.map((session) => (
@@ -162,7 +163,25 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
                 }
               `}
             >
-              {/* ... session content ... */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <MessageSquare className={`w-5 h-5 mt-1 ${
+                    isDark ? 'text-blue-400' : 'text-blue-500'
+                  }`} />
+                  <div>
+                    <h3 className={`font-medium ${
+                      isDark ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      {session.metadata.title || "Nouvelle conversation"}
+                    </h3>
+                    <p className={`text-sm mt-1 ${
+                      isDark ? 'text-gray-400' : 'text-gray-500'
+                    }`}>
+                      {session.metadata.messageCount} messages
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
         </div>
