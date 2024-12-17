@@ -9,11 +9,7 @@ import { apiClient } from '../../../core/api/client';
 import { API_ENDPOINTS } from '../../../core/api/endpoints';
 import type { Session } from '../../../core/session/types';
 
-interface SessionListProps {
-  className?: string;
-}
-
-const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
+const SessionList: React.FC = () => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { isDark } = useTheme();
@@ -27,7 +23,6 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
   const loadSessions = async () => {
     if (!userId) {
-      console.error("Pas d'userId disponible pour le chargement des sessions");
       setError("ID utilisateur non disponible");
       setIsLoading(false);
       return;
@@ -35,11 +30,9 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
     try {
       setIsLoading(true);
-      console.log('Tentative de chargement des sessions pour userId:', userId);
       const response = await apiClient.get<any[]>(
         API_ENDPOINTS.USER.HISTORY(userId)
       );
-      console.log('Réponse du serveur (sessions):', response);
 
       const formattedSessions: Session[] = response.map(history => ({
         id: history.session_id,
@@ -54,11 +47,10 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         }
       }));
 
-      console.log('Sessions formatées:', formattedSessions);
       setSessions(formattedSessions);
       setError(null);
     } catch (err) {
-      console.error('Erreur détaillée chargement sessions:', err);
+      console.error('Erreur chargement sessions:', err);
       setError('Impossible de charger les sessions');
       setSessions([]);
     } finally {
@@ -67,48 +59,32 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   };
 
   useEffect(() => {
-    console.log('SessionList monté ou userId changé:', userId);
     void loadSessions();
   }, [userId]);
 
-  const handleTestClick = () => {
-    console.log('TEST CLICK');
-    alert('Test click ok');
-  };
-
-  const handleSessionSelect = (session: Session) => {
-    console.log('handleSessionSelect appelé avec:', session);
+  const handleSessionSelect = async (session: Session) => {
     try {
-      setCurrentSession(session);
-      const url = `/${userId}/session/${session.id}`;
-      console.log('Navigation vers:', url);
-      alert(`Navigation vers ${url}`);
-      navigate(url);
+      await setCurrentSession(session);
+      navigate(`/${userId}/session/${session.id}`);
     } catch (err) {
-      console.error('Erreur détaillée sélection session:', err);
+      console.error('Erreur sélection session:', err);
       setError('Impossible de sélectionner cette session');
     }
   };
 
   const handleNewSession = async () => {
-    console.log('handleNewSession appelé');
-    alert('Création nouvelle session');
-    
     if (!userId) {
-      console.error("Pas d'userId disponible pour la création");
       setError("ID utilisateur non disponible");
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log('Tentative de création de session pour userId:', userId);
       
       const response = await apiClient.post<{ session_id: string }>(
         API_ENDPOINTS.SESSION.CREATE,
         { user_id: userId }
       );
-      console.log('Réponse création session:', response);
 
       if (response && response.session_id) {
         const newSession: Session = {
@@ -124,15 +100,12 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           }
         };
 
-        console.log('Nouvelle session créée:', newSession);
         setSessions(prevSessions => [newSession, ...prevSessions]);
-        setCurrentSession(newSession);
-        const url = `/${userId}/session/${newSession.id}`;
-        console.log('Navigation vers:', url);
-        navigate(url);
+        await setCurrentSession(newSession);
+        navigate(`/${userId}/session/${newSession.id}`);
       }
     } catch (err) {
-      console.error('Erreur détaillée création session:', err);
+      console.error('Erreur création session:', err);
       setError('Impossible de créer une nouvelle session');
     } finally {
       setIsLoading(false);
@@ -148,38 +121,19 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   }
 
   return (
-    <div className={`max-w-2xl mx-auto p-4 select-none ${className}`}>
+    <div className="max-w-2xl mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Sessions de chat
         </h1>
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={handleTestClick}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg
-                     hover:bg-green-700 active:bg-green-800
-                     focus:outline-none focus:ring-2 focus:ring-green-500
-                     transition-colors transform active:scale-95
-                     relative z-10 font-medium shadow-sm
-                     hover:shadow-md select-none"
-          >
-            Test Click
-          </button>
-          <button
-            type="button"
-            onClick={handleNewSession}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg 
-                     hover:bg-blue-700 active:bg-blue-800
-                     focus:outline-none focus:ring-2 focus:ring-blue-500
-                     transition-colors transform active:scale-95
-                     relative z-10 font-medium shadow-sm
-                     hover:shadow-md select-none"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Nouvelle session</span>
-          </button>
-        </div>
+        <button
+          onClick={() => void handleNewSession()}
+          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg 
+                   hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          <span>Nouvelle session</span>
+        </button>
       </div>
 
       {error && (
@@ -188,7 +142,6 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         }`}>
           <p>{error}</p>
           <button
-            type="button"
             onClick={() => void loadSessions()}
             className="mt-2 text-sm underline hover:text-red-800 
                      dark:hover:text-red-300 focus:outline-none"
@@ -198,25 +151,13 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         </div>
       )}
 
-      {sessions?.length > 0 ? (
+      {sessions.length > 0 ? (
         <div className="space-y-4">
           {sessions.map((session) => (
-            <div
+            <button
               key={session.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => handleSessionSelect(session)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  handleSessionSelect(session);
-                }
-              }}
-              className={`
-                p-4 rounded-lg border shadow-sm
-                transition-all duration-150 ease-in-out
-                cursor-pointer select-none relative z-10
-                hover:shadow-md active:scale-[0.995]
-                focus:outline-none focus:ring-2 focus:ring-blue-500
+              onClick={() => void handleSessionSelect(session)}
+              className={`w-full p-4 rounded-lg border text-left
                 ${session.id === currentSessionId
                   ? isDark
                     ? 'border-blue-700 bg-blue-900/20'
@@ -227,26 +168,24 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
                 }
               `}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3">
-                  <MessageSquare className={`w-5 h-5 mt-1 ${
-                    isDark ? 'text-blue-400' : 'text-blue-500'
-                  }`} />
-                  <div>
-                    <h3 className={`font-medium ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      {session.metadata.title || "Nouvelle conversation"}
-                    </h3>
-                    <p className={`text-sm mt-1 ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
-                    }`}>
-                      {session.metadata.messageCount} messages
-                    </p>
-                  </div>
+              <div className="flex items-start space-x-3">
+                <MessageSquare className={`w-5 h-5 mt-1 ${
+                  isDark ? 'text-blue-400' : 'text-blue-500'
+                }`} />
+                <div>
+                  <h3 className={`font-medium ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {session.metadata.title || "Nouvelle conversation"}
+                  </h3>
+                  <p className={`text-sm mt-1 ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    {session.metadata.messageCount} messages
+                  </p>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       ) : (
@@ -256,11 +195,6 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           }`} />
           <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
             Aucune session de chat
-          </p>
-          <p className={`text-sm mt-2 ${
-            isDark ? 'text-gray-500' : 'text-gray-600'
-          }`}>
-            Commencez une nouvelle conversation en cliquant sur le bouton ci-dessus
           </p>
         </div>
       )}
