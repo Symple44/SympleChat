@@ -73,44 +73,45 @@ const SessionList: React.FC = () => {
   };
 
   const handleNewSession = async () => {
-    if (!userId) {
-      setError("ID utilisateur non disponible");
-      return;
+  if (!userId) {
+    setError("ID utilisateur non disponible");
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+    
+    const response = await apiClient.post<{ session_id: string }>(
+      API_ENDPOINTS.SESSION.CREATE,
+      { user_id: userId }
+    );
+
+    if (response && response.session_id) {
+      const newSession: Session = {
+        id: response.session_id,
+        userId,
+        status: 'active',
+        metadata: {
+          title: "Nouvelle conversation",
+          messageCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          language: 'fr'
+        }
+      };
+
+      // Correction du typage de setSessions
+      setSessions((prevSessions: Session[]) => [newSession, ...prevSessions]);
+      await setCurrentSession(newSession);
+      navigate(`/${userId}/session/${newSession.id}`);
     }
-
-    try {
-      setIsLoading(true);
-      
-      const response = await apiClient.post<{ session_id: string }>(
-        API_ENDPOINTS.SESSION.CREATE,
-        { user_id: userId }
-      );
-
-      if (response && response.session_id) {
-        const newSession: Session = {
-          id: response.session_id,
-          userId,
-          status: 'active',
-          metadata: {
-            title: "Nouvelle conversation",
-            messageCount: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            language: 'fr'
-          }
-        };
-
-        setSessions(prevSessions => [newSession, ...prevSessions]);
-        await setCurrentSession(newSession);
-        navigate(`/${userId}/session/${newSession.id}`);
-      }
-    } catch (err) {
-      console.error('Erreur création session:', err);
-      setError('Impossible de créer une nouvelle session');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  } catch (err) {
+    console.error('Erreur création session:', err);
+    setError('Impossible de créer une nouvelle session');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   if (isLoading) {
     return (
