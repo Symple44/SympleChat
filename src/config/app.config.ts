@@ -15,7 +15,7 @@ const getBaseUrl = () => {
 const { API_BASE, WS_BASE, APP_BASE } = getBaseUrl();
 
 export const APP_CONFIG = {
-  NAME: "Eurêka Solutions",
+  NAME: "2CM Manager",
   TITLE_SUFFIX: "Chat",
   BASE_URL: APP_BASE,
   
