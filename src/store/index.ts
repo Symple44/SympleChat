@@ -36,7 +36,7 @@ interface StoreActions {
   
   // Session actions
   setCurrentSession: (session: Session) => Promise<void>;
-  setSessions: (sessions: Session[]) => void;
+  setSessions: (updater: Session[] | ((prev: Session[]) => Session[])) => void;
   
   // UI actions
   setTheme: (isDark: boolean) => void;
@@ -65,7 +65,7 @@ const initialState: StoreState = {
 
 export const useStore = create<StoreState & StoreActions>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
 
       sendMessage: async (content: string, sessionId: string) => {
@@ -171,10 +171,12 @@ export const useStore = create<StoreState & StoreActions>()(
         }
       },
 
-      setSessions: (sessions) => set(state => ({
+      setSessions: (updater) => set(state => ({
         session: {
           ...state.session,
-          sessions,
+          sessions: typeof updater === 'function' 
+            ? updater(state.session.sessions)
+            : updater,
           error: null
         }
       })),
