@@ -27,6 +27,7 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
   const loadSessions = async () => {
     if (!userId) {
+      console.error("Pas d'userId disponible pour le chargement des sessions");
       setError("ID utilisateur non disponible");
       setIsLoading(false);
       return;
@@ -34,11 +35,11 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
 
     try {
       setIsLoading(true);
-      console.log('Chargement des sessions pour:', userId);
+      console.log('Tentative de chargement des sessions pour userId:', userId);
       const response = await apiClient.get<any[]>(
         API_ENDPOINTS.USER.HISTORY(userId)
       );
-      console.log('Réponse sessions:', response);
+      console.log('Réponse du serveur (sessions):', response);
 
       const formattedSessions: Session[] = response.map(history => ({
         id: history.session_id,
@@ -53,10 +54,11 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         }
       }));
 
+      console.log('Sessions formatées:', formattedSessions);
       setSessions(formattedSessions);
       setError(null);
     } catch (err) {
-      console.error('Erreur chargement sessions:', err);
+      console.error('Erreur détaillée chargement sessions:', err);
       setError('Impossible de charger les sessions');
       setSessions([]);
     } finally {
@@ -65,29 +67,34 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
   };
 
   useEffect(() => {
+    console.log('SessionList monté ou userId changé:', userId);
     void loadSessions();
   }, [userId]);
 
   const handleSessionSelect = async (session: Session) => {
+    console.log('handleSessionSelect appelé avec:', session);
     try {
-      console.log('Sélection session:', session);
       setCurrentSession(session);
-      navigate(`/${userId}/session/${session.id}`);
+      const url = `/${userId}/session/${session.id}`;
+      console.log('Navigation vers:', url);
+      navigate(url);
     } catch (err) {
-      console.error('Erreur sélection session:', err);
+      console.error('Erreur détaillée sélection session:', err);
       setError('Impossible de sélectionner cette session');
     }
   };
 
   const handleNewSession = async () => {
+    console.log('handleNewSession appelé');
     if (!userId) {
+      console.error("Pas d'userId disponible pour la création");
       setError("ID utilisateur non disponible");
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log('Création nouvelle session pour:', userId);
+      console.log('Tentative de création de session pour userId:', userId);
       
       const response = await apiClient.post<{ session_id: string }>(
         API_ENDPOINTS.SESSION.CREATE,
@@ -109,17 +116,22 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           }
         };
 
+        console.log('Nouvelle session créée:', newSession);
         setSessions(prevSessions => [newSession, ...prevSessions]);
         setCurrentSession(newSession);
-        navigate(`/${userId}/session/${newSession.id}`);
+        const url = `/${userId}/session/${newSession.id}`;
+        console.log('Navigation vers:', url);
+        navigate(url);
       }
     } catch (err) {
-      console.error('Erreur création session:', err);
+      console.error('Erreur détaillée création session:', err);
       setError('Impossible de créer une nouvelle session');
     } finally {
       setIsLoading(false);
     }
   };
+
+  console.log('SessionList rendu avec sessions:', sessions);
 
   if (isLoading) {
     return (
@@ -136,8 +148,13 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           Sessions de chat
         </h1>
         <button
-          onClick={handleNewSession}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Clic sur bouton nouvelle session détecté');
+            void handleNewSession();
+          }}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
         >
           <Plus className="w-5 h-5" />
           <span>Nouvelle session</span>
@@ -150,8 +167,12 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
         }`}>
           <p>{error}</p>
           <button
-            onClick={() => void loadSessions()}
-            className="mt-2 text-sm underline"
+            onClick={(e) => {
+              e.preventDefault();
+              console.log('Clic sur bouton réessayer');
+              void loadSessions();
+            }}
+            className="mt-2 text-sm underline cursor-pointer"
           >
             Réessayer
           </button>
@@ -163,9 +184,14 @@ const SessionList: React.FC<SessionListProps> = ({ className = '' }) => {
           {sessions.map((session) => (
             <div
               key={session.id}
-              onClick={() => handleSessionSelect(session)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Clic sur session détecté:', session.id);
+                void handleSessionSelect(session);
+              }}
               className={`
-                p-4 rounded-lg border cursor-pointer transition-all
+                p-4 rounded-lg border transition-all cursor-pointer
                 ${session.id === currentSessionId
                   ? isDark
                     ? 'border-blue-700 bg-blue-900/20'
