@@ -8,17 +8,16 @@ export const API_ENDPOINTS = {
   },
   SESSION: {
     CREATE: '/sessions/new',
-    LIST: '/sessions',
     GET: (id: string) => `/sessions/${id}`,
     HISTORY: (sessionId: string) => `/history/session/${sessionId}`
   },
   USER: {
-    HISTORY: (userId: string) => `/history/user/${userId}`
+    HISTORY: (userId: string) => `/history/user/${userId}`,
+    CHAT_HISTORY: (userId: string) => `/history/session`
   },
   HEALTH: '/health'
 } as const;
 
-// Types pour l'API
 export type ApiEndpoints = typeof API_ENDPOINTS;
 
 // Helper type pour obtenir le type d'un endpoint spécifique
