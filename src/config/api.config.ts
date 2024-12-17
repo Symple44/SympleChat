@@ -4,7 +4,11 @@ const isDev = import.meta.env.MODE === 'development';
 const defaultApiUrl = isDev ? 'http://192.168.0.15:8000' : window.location.origin;
 
 export const API_CONFIG = {
-  BASE_URL: `${defaultApiUrl}/api`,
+  BASE_URL: (() => {
+    const url = `${defaultApiUrl}/api`;
+    console.log('API Base URL:', url);
+    return url;
+  })(),
   WS_URL: `${defaultApiUrl.replace(/^http/, 'ws')}/ws`,
   DEFAULT_HEADERS: {
     'Content-Type': 'application/json'
