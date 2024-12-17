@@ -10,8 +10,7 @@ export class SessionManager {
   async createSession(userId: string): Promise<Session> {
     try {
       const response = await apiClient.post<Session>(API_ENDPOINTS.SESSION.CREATE, {
-        userId,
-        created_at: new Date().toISOString()
+        user_id: userId
       });
 
       this.currentSession = response;
@@ -38,7 +37,7 @@ export class SessionManager {
   async getUserSessions(userId: string): Promise<Session[]> {
     try {
       const response = await apiClient.get<Session[]>(
-        API_ENDPOINTS.USER.SESSIONS(userId)
+        API_ENDPOINTS.USER.HISTORY(userId)
       );
       return response;
     } catch (error) {
