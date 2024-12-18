@@ -4,238 +4,274 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { apiClient } from '../core/api/client';
 import { API_ENDPOINTS } from '../core/api/endpoints';
-import type { Message, ChatRequest  } from '../features/chat/types/chat';
+import type { Message, ChatRequest } from '../features/chat/types/chat';
 import type { Session } from '../core/session/types';
-import { APP_CONFIG } from '../config/app.config';
-import { generateUUID } from '../shared/utils/uuid';
+
+interface SessionState {
+  data: Record<string, Session>;
+  currentId: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
+interface MessagesState {
+  bySession: Record<string, Message[]>;
+  loading: boolean;
+  error: string | null;
+}
 
 interface StoreState {
-  chat: {
-    messages: Message[];
-    isLoading: boolean;
-    error: string | null;
-  };
-  session: {
-    sessions: Session[];
-    currentSessionId: string | null;
-    isLoading: boolean;
-    error: string | null;
-  };
-  ui: {
-    theme: 'light' | 'dark';
-    error: string | null;
-    isMenuOpen: boolean;
-  };
+  sessions: SessionState;
+  messages: MessagesState;
+  theme: 'light' | 'dark';
 }
 
 interface StoreActions {
-  // Chat actions
-  sendMessage: (content: string, sessionId: string) => Promise<void>;
-  setMessages: (messages: Message[]) => void;
-  addMessage: (message: Message) => void;
-  clearMessages: () => void;
-  loadSessionMessages: (sessionId: string) => Promise<void>;
-  
   // Session actions
   setCurrentSession: (session: Session) => Promise<void>;
-  setSessions: (updater: Session[] | ((prev: Session[]) => Session[])) => void;
+  fetchSessions: (userId: string) => Promise<void>;
+  createSession: (userId: string) => Promise<Session>;
+  
+  // Message actions
+  sendMessage: (content: string, sessionId: string) => Promise<void>;
+  fetchMessages: (sessionId: string) => Promise<void>;
   
   // UI actions
-  setTheme: (isDark: boolean) => void;
-  setError: (error: string | null) => void;
-  clearError: () => void;
+  setTheme: (theme: 'light' | 'dark') => void;
 }
-
-const initialState: StoreState = {
-  chat: {
-    messages: [],
-    isLoading: false,
-    error: null
-  },
-  session: {
-    sessions: [],
-    currentSessionId: null,
-    isLoading: false,
-    error: null
-  },
-  ui: {
-    theme: 'light',
-    error: null,
-    isMenuOpen: false
-  }
-};
 
 export const useStore = create<StoreState & StoreActions>()(
   persist(
-    (set) => ({
-      ...initialState,
+    (set, get) => ({
+      // Initial state
+      sessions: {
+        data: {},
+        currentId: null,
+        loading: false,
+        error: null
+      },
+      messages: {
+        bySession: {},
+        loading: false,
+        error: null
+      },
+      theme: 'light',
 
-      sendMessage: async (content: string, sessionId: string): Promise<void> => {
+      // Session actions
+      setCurrentSession: async (session) => {
         try {
-          set(state => ({ chat: { ...state.chat, isLoading: true, error: null } }));
-          
-          // Format the request according to API specifications
-          const request: ChatRequest = {
-            user_id: APP_CONFIG.CHAT.DEFAULT_USER_ID,
-            query: content.trim(),
-            session_id: sessionId,
-            language: APP_CONFIG.CHAT.DEFAULT_LANGUAGE,
-            context: {},
-            application: 'symple-chat'
-          };
+          set(state => ({
+            sessions: {
+              ...state.sessions,
+              currentId: session.id,
+              error: null
+            }
+          }));
 
-          // Create optimistic message
+          // Charger les messages si nécessaire
+          if (!get().messages.bySession[session.id]) {
+            await get().fetchMessages(session.id);
+          }
+        } catch (error) {
+          set(state => ({
+            sessions: {
+              ...state.sessions,
+              error: error instanceof Error ? error.message : 'Failed to set session'
+            }
+          }));
+        }
+      },
+
+      fetchSessions: async (userId) => {
+        try {
+          set(state => ({
+            sessions: { ...state.sessions, loading: true, error: null }
+          }));
+
+          const response = await apiClient.get<Session[]>(
+            API_ENDPOINTS.USER.HISTORY(userId)
+          );
+
+          // Convertir le tableau en objet indexé
+          const sessionMap = response.reduce<Record<string, Session>>(
+            (acc, session) => {
+              acc[session.id] = session;
+              return acc;
+            },
+            {}
+          );
+
+          set(state => ({
+            sessions: {
+              ...state.sessions,
+              data: sessionMap,
+              loading: false
+            }
+          }));
+        } catch (error) {
+          set(state => ({
+            sessions: {
+              ...state.sessions,
+              loading: false,
+              error: error instanceof Error ? error.message : 'Failed to fetch sessions'
+            }
+          }));
+        }
+      },
+
+      createSession: async (userId) => {
+        try {
+          set(state => ({
+            sessions: { ...state.sessions, loading: true, error: null }
+          }));
+
+          const response = await apiClient.post<Session>(
+            API_ENDPOINTS.SESSION.CREATE,
+            { user_id: userId }
+          );
+
+          set(state => ({
+            sessions: {
+              ...state.sessions,
+              data: {
+                ...state.sessions.data,
+                [response.id]: response
+              },
+              currentId: response.id,
+              loading: false
+            }
+          }));
+
+          return response;
+        } catch (error) {
+          set(state => ({
+            sessions: {
+              ...state.sessions,
+              loading: false,
+              error: error instanceof Error ? error.message : 'Failed to create session'
+            }
+          }));
+          throw error;
+        }
+      },
+
+      // Message actions
+      sendMessage: async (content, sessionId) => {
+        try {
+          set(state => ({
+            messages: { ...state.messages, loading: true, error: null }
+          }));
+
           const optimisticMessage: Message = {
-            id: generateUUID(),
-            content: content.trim(),
+            id: Math.random().toString(),
+            content,
             type: 'user',
             timestamp: new Date().toISOString(),
             sessionId
           };
 
-          // Add optimistic message
+          // Mise à jour optimiste
           set(state => ({
-            chat: {
-              ...state.chat,
-              messages: [...state.chat.messages, optimisticMessage]
+            messages: {
+              ...state.messages,
+              bySession: {
+                ...state.messages.bySession,
+                [sessionId]: [
+                  ...(state.messages.bySession[sessionId] || []),
+                  optimisticMessage
+                ]
+              }
             }
           }));
 
-          // Send to API
           const response = await apiClient.post<Message>(
             API_ENDPOINTS.CHAT.SEND,
-            request
+            {
+              content,
+              session_id: sessionId
+            }
           );
 
-          // Update with server response
+          // Mise à jour avec la réponse du serveur
           set(state => ({
-            chat: {
-              ...state.chat,
-              messages: [
-                ...state.chat.messages.filter(m => m.id !== optimisticMessage.id),
-                response
-              ],
-              isLoading: false
+            messages: {
+              ...state.messages,
+              bySession: {
+                ...state.messages.bySession,
+                [sessionId]: [
+                  ...(state.messages.bySession[sessionId] || []).filter(
+                    m => m.id !== optimisticMessage.id
+                  ),
+                  response
+                ]
+              },
+              loading: false
             }
           }));
-
         } catch (error) {
-          set(state => ({ 
-            chat: { 
-              ...state.chat, 
-              isLoading: false,
-              error: error instanceof Error ? error.message : 'Error sending message'
+          set(state => ({
+            messages: {
+              ...state.messages,
+              loading: false,
+              error: error instanceof Error ? error.message : 'Failed to send message'
             }
           }));
           throw error;
         }
       },
-      
-      setMessages: (messages) => set(state => ({
-        chat: { ...state.chat, messages, error: null }
-      })),
-      
-      addMessage: (message) => set(state => ({
-        chat: { 
-          ...state.chat, 
-          messages: [...state.chat.messages, message],
-          error: null
-        }
-      })),
-      
-      clearMessages: () => set(state => ({
-        chat: { ...state.chat, messages: [], error: null }
-      })),
 
-      loadSessionMessages: async (sessionId: string) => {
+      fetchMessages: async (sessionId) => {
         try {
-          set(state => ({ chat: { ...state.chat, isLoading: true, error: null } }));
-          
+          set(state => ({
+            messages: { ...state.messages, loading: true, error: null }
+          }));
+
           const response = await apiClient.get<Message[]>(
             API_ENDPOINTS.SESSION.HISTORY(sessionId)
           );
 
-          set(state => ({ 
-            chat: { 
-              ...state.chat,
-              messages: response || [],
-              isLoading: false 
-            }
-          }));
-        } catch (error) {
-          set(state => ({ 
-            chat: { 
-              ...state.chat, 
-              isLoading: false,
-              error: error instanceof Error ? error.message : 'Error loading messages'
-            }
-          }));
-          throw error;
-        }
-      },
-
-      setCurrentSession: async (session) => {
-        try {
           set(state => ({
-            session: { 
-              ...state.session, 
-              currentSessionId: session.id,
-              error: null
-            }
-          }));
-
-          // Charger les messages de la session
-          const messages = await apiClient.get<Message[]>(
-            API_ENDPOINTS.SESSION.HISTORY(session.id)
-          );
-
-          set(state => ({
-            chat: {
-              ...state.chat,
-              messages: messages || []
+            messages: {
+              ...state.messages,
+              bySession: {
+                ...state.messages.bySession,
+                [sessionId]: response
+              },
+              loading: false
             }
           }));
         } catch (error) {
           set(state => ({
-            session: {
-              ...state.session,
-              error: error instanceof Error ? error.message : 'Error setting session'
+            messages: {
+              ...state.messages,
+              loading: false,
+              error: error instanceof Error ? error.message : 'Failed to fetch messages'
             }
           }));
-          throw error;
         }
       },
 
-      setSessions: (updater) => set(state => ({
-        session: {
-          ...state.session,
-          sessions: typeof updater === 'function' 
-            ? updater(state.session.sessions)
-            : updater,
-          error: null
-        }
-      })),
-
-      setTheme: (isDark) => set(state => ({
-        ui: { ...state.ui, theme: isDark ? 'dark' : 'light' }
-      })),
-
-      setError: (error) => set(state => ({
-        ui: { ...state.ui, error }
-      })),
-
-      clearError: () => set(state => ({
-        ui: { ...state.ui, error: null }
-      }))
+      // UI actions
+      setTheme: (theme) => set({ theme })
     }),
     {
       name: 'chat-store',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        ui: { theme: state.ui.theme }
+        theme: state.theme
       })
     }
   )
 );
+
+// Hooks utilitaires
+export const useCurrentSession = () => {
+  const { currentId, data } = useStore(state => state.sessions);
+  return currentId ? data[currentId] : null;
+};
+
+export const useSessionMessages = (sessionId: string) => {
+  return useStore(state => state.messages.bySession[sessionId] || []);
+};
 
 export default useStore;
