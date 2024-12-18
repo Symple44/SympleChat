@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { apiClient } from '../core/api/client';
 import { API_ENDPOINTS } from '../core/api/endpoints';
-import type { Message } from '../features/chat/types/chat';
+import type { Message, ChatRequest  } from '../features/chat/types/chat';
 import type { Session } from '../core/session/types';
 import { APP_CONFIG } from '../config/app.config';
 
