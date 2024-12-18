@@ -12,6 +12,15 @@ export interface Message {
   confidence?: number;
 }
 
+export interface ChatRequest {
+  user_id: string;
+  query: string;
+  session_id?: string;
+  context?: Record<string, unknown>;
+  language?: string;
+  application?: string;
+}
+
 export interface MessageMetadata {
   edited?: boolean;
   editedAt?: string;
