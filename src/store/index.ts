@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../core/api/endpoints';
 import type { Message, ChatRequest  } from '../features/chat/types/chat';
 import type { Session } from '../core/session/types';
 import { APP_CONFIG } from '../config/app.config';
+import { generateUUID } from '../shared/utils/uuid';
 
 interface StoreState {
   chat: {
@@ -85,7 +86,7 @@ export const useStore = create<StoreState & StoreActions>()(
 
           // Create optimistic message
           const optimisticMessage: Message = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             content: content.trim(),
             type: 'user',
             timestamp: new Date().toISOString(),
