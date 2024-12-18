@@ -1,133 +1,82 @@
 // src/features/chat/components/MessageList.tsx
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Bot } from 'lucide-react';
-import DocumentPreview from '../../documents/components/DocumentPreview';
-import DocumentViewer from '../../documents/components/DocumentViewer';
-import { useTheme } from '../../../shared/hooks/useTheme';
-import type { Message } from '../types/chat';
-import type { DocumentFragment } from '../../documents/types/document';
+import { useTheme } from '@/shared/hooks/useTheme';
+import type { Message } from '@/types/message';
 
 interface MessageListProps {
   messages: Message[];
-  isLoading: boolean;
-  className?: string;
+  isLoading?: boolean;
 }
 
-const MessageList: React.FC<MessageListProps> = ({
+export const MessageList: React.FC<MessageListProps> = ({ 
   messages,
-  isLoading,
-  className = ''
+  isLoading 
 }) => {
-  const [selectedDocument, setSelectedDocument] = useState<DocumentFragment | null>(null);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const { isDark } = useTheme();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
-  const formatDate = useCallback((timestamp: string): string => {
-    return new Intl.DateTimeFormat('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(new Date(timestamp));
-  }, []);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
-  }, []);
-
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (!hasScrolledToBottom) {
-      scrollToBottom('auto');
-      setHasScrolledToBottom(true);
-    } else {
-      scrollToBottom();
+    if (endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, hasScrolledToBottom, scrollToBottom]);
+  }, [messages]);
 
-  const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
-    
-    const { scrollHeight, scrollTop, clientHeight } = containerRef.current;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-    setHasScrolledToBottom(isNearBottom);
-  }, []);
+  const formatTimestamp = (timestamp: string): string => {
+    return new Date(timestamp).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
-    <>
-      <div 
-        ref={containerRef}
-        onScroll={handleScroll}
-        className={`h-full overflow-y-auto px-4 py-4 ${className}`}
-      >
-        {messages.map((msg) => (
-          <div key={msg.id} className="mb-3">
-            {msg.type === 'user' ? (
-              <div className="flex justify-end">
-                <div className="max-w-[80%]">
-                  <div className="bg-blue-500/90 text-white rounded-xl px-4 py-2">
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                    <span className="text-xs opacity-75 block text-right mt-1">
-                      {formatDate(msg.timestamp)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-indigo-500 to-blue-600">
-                  <Bot size={16} className="text-white" />
-                </div>
-                <div className="max-w-[80%] ml-3">
-                  <div className={`rounded-xl px-4 py-2 ${
-                    isDark 
-                      ? 'bg-gray-800/90 text-gray-100' 
-                      : 'bg-gray-100/90 text-gray-900'
-                  }`}>
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                    
-                    {msg.fragments && msg.fragments.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {msg.fragments.map((doc, index) => (
-                          <DocumentPreview
-                            key={index}
-                            document={doc}
-                            onClick={() => setSelectedDocument(doc)}
-                          />
-                        ))}
-                      </div>
-                    )}
+    <div className="h-full overflow-y-auto p-4 space-y-4">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+        >
+          {message.type === 'assistant' && (
+            <div className="w-8 h-8 rounded-full flex items-center justify-center 
+                          bg-gradient-to-br from-blue-500 to-blue-600 mr-2">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+          )}
 
-                    <div className="mt-1 flex justify-between items-center text-xs opacity-75">
-                      <span>{formatDate(msg.timestamp)}</span>
-                      {msg.confidence !== undefined && (
-                        <span>Confiance: {(msg.confidence * 100).toFixed(0)}%</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className={`max-w-[70%] rounded-lg px-4 py-2
+            ${message.type === 'user' 
+              ? 'bg-blue-500 text-white' 
+              : `${isDark ? 'bg-gray-800' : 'bg-white'} 
+                 ${isDark ? 'text-gray-100' : 'text-gray-900'}`
+            }`}
+          >
+            <div className="whitespace-pre-wrap break-words">
+              {message.content}
+            </div>
+            
+            <div className={`text-xs mt-1 
+              ${message.type === 'user'
+                ? 'text-blue-100'
+                : isDark ? 'text-gray-400' : 'text-gray-500'
+              }`}
+            >
+              {formatTimestamp(message.timestamp)}
+            </div>
+
+            {message.metadata?.edited && (
+              <span className="text-xs italic mt-1 text-gray-400">
+                (modifié)
+              </span>
             )}
           </div>
-        ))}
+        </div>
+      ))}
 
-        {isLoading && (
-          <div className="flex justify-center py-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-blue-400" />
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
-
-      {selectedDocument && (
-        <DocumentViewer 
-          document={selectedDocument} 
-          onClose={() => setSelectedDocument(null)} 
-        />
-      )}
-    </>
+      {/* Scrolling anchor */}
+      <div ref={endOfMessagesRef} />
+    </div>
   );
 };
 
