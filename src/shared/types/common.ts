@@ -1,8 +1,12 @@
 // src/shared/types/common.ts
 
-export type Status = 'idle' | 'loading' | 'success' | 'error';
+export interface BaseEntity {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-export interface ApiResponse<T> {
+export interface ApiResponse<T = unknown> {
   data: T;
   status: number;
   message?: string;
@@ -16,64 +20,11 @@ export interface ApiError {
   details?: unknown;
 }
 
-export interface PaginationParams {
-  page: number;
-  limit: number;
-  total?: number;
-}
-
-export interface BaseEntity {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface User {
-  id: string;
-  name?: string;
-  email?: string;
-  preferences?: UserPreferences;
-}
-
-export interface UserPreferences {
-  language: string;
-  theme: 'light' | 'dark';
-  notifications: boolean;
-}
+export type Status = 'idle' | 'loading' | 'success' | 'error';
 
 export type LoadingState = {
   isLoading: boolean;
   error: string | null;
 };
 
-export type ActionStatus = {
-  status: Status;
-  error?: string;
-  timestamp?: number;
-};
-
-export interface FormField<T = string> {
-  value: T;
-  error?: string;
-  touched: boolean;
-  required?: boolean;
-}
-
-export type FormFields<T> = {
-  [K in keyof T]: FormField<T[K]>;
-};
-
-export interface SuccessResponse<T> {
-  success: true;
-  data: T;
-  message?: string;
-}
-
-export interface ErrorResponse {
-  success: false;
-  error: string;
-  code?: string;
-  details?: unknown;
-}
-
-export type ApiResult<T> = SuccessResponse<T> | ErrorResponse;
+export type Theme = 'light' | 'dark';
