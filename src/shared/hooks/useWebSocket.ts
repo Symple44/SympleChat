@@ -1,122 +1,116 @@
 // /src/shared/hooks/useWebSocket.ts
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { 
-  WebSocketEventType,
-  WebSocketMessage,
-  WebSocketPayload,
-  UseWebSocketOptions
-} from '../../core/socket/types';
-import { API_CONFIG } from '../../config/api.config';
-
-const DEFAULT_OPTIONS: Required<UseWebSocketOptions> = {
-  url: API_CONFIG.WS_URL,
-  autoReconnect: true,
-  reconnectAttempts: 5,
-  reconnectDelay: 3000,
-  debug: process.env.NODE_ENV === 'development'
-};
+import { useStore } from '@/store/store';
+import { APP_CONFIG } from '@/config/app.config';
+import type { WebSocketMessage, WebSocketConfig } from '../types';
 
 interface UseWebSocketReturn {
   isConnected: boolean;
-  lastMessage: WebSocketMessage | null;
   error: Error | null;
-  reconnectAttempts: number;
-  send: <T extends WebSocketEventType>(type: T, payload: WebSocketPayload<T>) => boolean;
+  send: (type: string, payload: unknown) => boolean;
   connect: () => void;
   disconnect: () => void;
 }
 
-export function useWebSocket(options: Partial<UseWebSocketOptions> = {}): UseWebSocketReturn {
-  const config = { ...DEFAULT_OPTIONS, ...options };
-  const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+const DEFAULT_CONFIG: Required<WebSocketConfig> = {
+  url: APP_CONFIG.CHAT.WS_BASE_URL,
+  reconnectAttempts: 5,
+  reconnectDelay: 3000,
+  debug: APP_CONFIG.UI.DEBUG
+};
 
+export function useWebSocket(config?: Partial<WebSocketConfig>): UseWebSocketReturn {
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimeoutRef = useRef<number>();
+
+  const finalConfig = { ...DEFAULT_CONFIG, ...config };
+  const store = useStore();
 
   const debug = useCallback((...args: unknown[]) => {
-    if (config.debug) {
+    if (finalConfig.debug) {
       console.log('[WebSocket]', ...args);
     }
-  }, [config.debug]);
+  }, [finalConfig.debug]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     try {
-      wsRef.current = new WebSocket(config.url);
+      wsRef.current = new WebSocket(finalConfig.url);
+
       wsRef.current.onopen = () => {
         debug('Connected');
         setIsConnected(true);
         setError(null);
-        setReconnectAttempts(0);
+        reconnectAttemptsRef.current = 0;
       };
 
       wsRef.current.onclose = () => {
         debug('Disconnected');
         setIsConnected(false);
-        if (config.autoReconnect && reconnectAttempts < config.reconnectAttempts) {
-          const timeout = config.reconnectDelay * Math.pow(1.5, reconnectAttempts);
-          debug(`Reconnecting in ${timeout}ms (attempt ${reconnectAttempts + 1})`);
+
+        if (reconnectAttemptsRef.current < finalConfig.reconnectAttempts) {
+          const timeout = finalConfig.reconnectDelay;
+          debug(`Reconnecting in ${timeout}ms (attempt ${reconnectAttemptsRef.current + 1})`);
+          
           reconnectTimeoutRef.current = window.setTimeout(() => {
-            setReconnectAttempts(prev => prev + 1);
+            reconnectAttemptsRef.current += 1;
             connect();
           }, timeout);
         }
       };
 
-      wsRef.current.onmessage = (event: MessageEvent) => {
+      wsRef.current.onmessage = (event) => {
         try {
-          const message = JSON.parse(event.data) as WebSocketMessage;
+          const message: WebSocketMessage = JSON.parse(event.data);
           debug('Received:', message);
-          setLastMessage(message);
+
+          // Mise à jour du store en fonction du type de message
+          if (message.type === 'message' && store.sessions.currentId) {
+            store.messages.bySession[store.sessions.currentId].push(message.payload);
+          }
         } catch (error) {
           debug('Error parsing message:', error);
         }
       };
 
-      wsRef.current.onerror = (event: Event) => {
-        const error = event instanceof Error ? event : new Error('WebSocket error');
-        debug('Error:', error);
-        setError(error);
+      wsRef.current.onerror = (event) => {
+        const wsError = event instanceof Error ? event : new Error('WebSocket error');
+        debug('Error:', wsError);
+        setError(wsError);
       };
+
     } catch (error) {
-      debug('Error creating WebSocket:', error);
+      debug('Connection error:', error);
       setError(error instanceof Error ? error : new Error('Failed to connect'));
     }
-  }, [config.url, config.autoReconnect, config.reconnectAttempts, config.reconnectDelay, reconnectAttempts, debug]);
+  }, [finalConfig, debug, store]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       window.clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
     }
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnected(false);
   }, []);
 
-  const send = useCallback(<T extends WebSocketEventType>(
-    type: T,
-    payload: WebSocketPayload<T>
-  ): boolean => {
+  const send = useCallback((type: string, payload: unknown): boolean => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) {
       return false;
     }
 
     try {
-      const message: WebSocketMessage<T> = {
-        type,
-        payload
-      };
+      const message: WebSocketMessage = { type, payload };
       wsRef.current.send(JSON.stringify(message));
       debug('Sent:', message);
       return true;
     } catch (error) {
-      debug('Error sending message:', error);
+      debug('Send error:', error);
       return false;
     }
   }, [debug]);
@@ -130,9 +124,7 @@ export function useWebSocket(options: Partial<UseWebSocketOptions> = {}): UseWeb
 
   return {
     isConnected,
-    lastMessage,
     error,
-    reconnectAttempts,
     send,
     connect,
     disconnect
