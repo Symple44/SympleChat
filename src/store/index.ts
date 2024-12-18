@@ -74,9 +74,9 @@ export const useStore = create<StoreState & StoreActions>()(
           set(state => ({ chat: { ...state.chat, isLoading: true, error: null } }));
           
           // Format the request according to API specifications
-          const request = {
+          const request: ChatRequest = {
             user_id: APP_CONFIG.CHAT.DEFAULT_USER_ID,
-            query: content,
+            query: content.trim(),
             session_id: sessionId,
             language: APP_CONFIG.CHAT.DEFAULT_LANGUAGE,
             context: {},
@@ -86,7 +86,7 @@ export const useStore = create<StoreState & StoreActions>()(
           // Create optimistic message
           const optimisticMessage: Message = {
             id: crypto.randomUUID(),
-            content,
+            content: content.trim(),
             type: 'user',
             timestamp: new Date().toISOString(),
             sessionId
