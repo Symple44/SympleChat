@@ -1,51 +1,46 @@
 // src/features/chat/components/MessageInput.tsx
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
-import { APP_CONFIG } from '../../../config/app.config';
+import { APP_CONFIG } from '@/config/app.config';
 
 interface MessageInputProps {
   onSend: (content: string) => Promise<void>;
-  isLoading: boolean;
-  disabled: boolean;
-  className?: string;
+  disabled?: boolean;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({
-  onSend,
-  isLoading,
-  disabled,
-  className = ''
+export const MessageInput: React.FC<MessageInputProps> = ({ 
+  onSend, 
+  disabled = false 
 }) => {
-  const [message, setMessage] = useState<string>('');
+  const [content, setContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const adjustTextareaHeight = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
-    }
-  }, []);
-
+  // Ajuste automatiquement la hauteur du textarea
   useEffect(() => {
-    adjustTextareaHeight();
-  }, [message, adjustTextareaHeight]);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`;
+    }
+  }, [content]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!message.trim() || isLoading || disabled) return;
+    if (!content.trim() || isLoading || disabled) return;
 
     try {
-      await onSend(message);
-      setMessage('');
-      
+      setIsLoading(true);
+      await onSend(content);
+      setContent('');
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
     } catch (error) {
-      console.error('Erreur envoi message:', error);
+      console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -56,49 +51,41 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    if (value.length <= APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH) {
-      setMessage(value);
-      adjustTextareaHeight();
-    }
-  };
-
   return (
-    <div className={`border-t dark:border-gray-700 bg-white dark:bg-gray-800 p-4 ${className}`}>
-      <form 
-        onSubmit={handleSubmit} 
-        className="max-w-3xl mx-auto flex space-x-4 items-end"
-      >
+    <form onSubmit={handleSubmit} className="p-4 bg-white dark:bg-gray-800">
+      <div className="max-w-4xl mx-auto flex gap-4">
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
-            value={message}
-            onChange={handleChange}
+            value={content}
+            onChange={(e) => {
+              const newContent = e.target.value;
+              if (newContent.length <= APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH) {
+                setContent(newContent);
+              }
+            }}
             onKeyDown={handleKeyDown}
-            rows={1}
-            className="w-full rounded-lg border dark:border-gray-600 px-4 py-2
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:outline-none focus:ring-2 focus:ring-blue-500
-                     disabled:opacity-50 disabled:cursor-not-allowed
-                     resize-none min-h-[42px]"
             placeholder={disabled ? "Connexion en cours..." : "Votre message..."}
             disabled={disabled || isLoading}
+            className="w-full resize-none rounded-lg border dark:border-gray-600 
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     p-3 focus:outline-none focus:ring-2 focus:ring-blue-500
+                     disabled:opacity-50 min-h-[44px] max-h-[200px]"
+            rows={1}
           />
-          {message.length > 0 && (
+          {content.length > 0 && (
             <div className="absolute right-2 bottom-2 text-xs text-gray-500 dark:text-gray-400">
-              {message.length}/{APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH}
+              {content.length}/{APP_CONFIG.CHAT.MAX_MESSAGE_LENGTH}
             </div>
           )}
         </div>
-
+        
         <button
           type="submit"
-          disabled={!message.trim() || isLoading || disabled}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg
-                   hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed
-                   flex items-center gap-2 min-w-[120px] justify-center h-[42px]
-                   transition-colors duration-200"
+          disabled={!content.trim() || isLoading || disabled}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2
+                   transition-colors min-w-[100px] justify-center"
         >
           {isLoading ? (
             <>
@@ -112,8 +99,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </>
           )}
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 };
 
