@@ -1,54 +1,31 @@
 // src/shared/hooks/useTheme.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useStore } from '@/store/store';
 
 interface UseThemeReturn {
   isDark: boolean;
   toggleTheme: () => void;
   setTheme: (isDark: boolean) => void;
-  systemTheme: 'dark' | 'light';
 }
 
 export function useTheme(): UseThemeReturn {
-  const [isDark, setIsDark] = useState(() => {
-    const stored = localStorage.getItem('theme');
-    if (stored) return stored === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
+  const theme = useStore(state => state.theme);
+  const setStoreTheme = useStore(state => state.setTheme);
 
-  const [systemTheme, setSystemTheme] = useState<'dark' | 'light'>(
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  );
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = (e: MediaQueryListEvent) => {
-      setSystemTheme(e.matches ? 'dark' : 'light');
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  useEffect(() => {
+  const setTheme = useCallback((isDark: boolean) => {
+    setStoreTheme(isDark ? 'dark' : 'light');
     document.documentElement.classList.toggle('dark', isDark);
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
+  }, [setStoreTheme]);
 
   const toggleTheme = useCallback(() => {
-    setIsDark(prev => !prev);
-  }, []);
-
-  const setTheme = useCallback((dark: boolean) => {
-    setIsDark(dark);
-  }, []);
+    setTheme(theme === 'light');
+  }, [theme, setTheme]);
 
   return {
-    isDark,
+    isDark: theme === 'dark',
     toggleTheme,
-    setTheme,
-    systemTheme
+    setTheme
   };
 }
 
